@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CompliCopilot</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header dashboard-header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <img src="assets/img/logo.png" alt="CompliCopilot" class="logo">
+                <span class="brand-name">CompliCopilot</span>
+            </div>
+            <div class="dashboard-nav">
+                <span class="welcome-text">Hello, <span id="user-name">Strikers</span>!</span>
+                <a href="upload.html" class="btn-primary glow">Upload New Receipt</a>
+                <div class="user-menu">
+                    <button class="user-avatar" onclick="toggleUserMenu()">
+                        <span class="avatar-text">S</span>
+                    </button>
+                    <div class="user-dropdown" id="user-dropdown">
+                        <a href="#" class="dropdown-item">Profile Settings</a>
+                        <a href="#" class="dropdown-item">Billing</a>
+                        <a href="#" class="dropdown-item">Help</a>
+                        <hr class="dropdown-divider">
+                        <a href="index.html" class="dropdown-item">Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Dashboard Content -->
+    <main class="dashboard">
+        <div class="container">
+            <!-- Overview Cards -->
+            <section class="overview">
+                <div class="overview-grid">
+                    <div class="overview-card">
+                        <div class="card-icon spending"></div>
+                        <div class="card-content">
+                            <h3>This Month's Spending</h3>
+                            <div class="card-value">₹45,280</div>
+                            <div class="card-change positive">+12% from last month</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-icon pending"></div>
+                        <div class="card-content">
+                            <h3>Pending Approvals</h3>
+                            <div class="card-value">7</div>
+                            <div class="card-change neutral">3 need attention</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-icon uncategorized"></div>
+                        <div class="card-content">
+                            <h3>Uncategorized</h3>
+                            <div class="card-value">2</div>
+                            <div class="card-change negative">Action required</div>
+                        </div>
+                    </div>
+                    <div class="overview-card">
+                        <div class="card-icon saved"></div>
+                        <div class="card-content">
+                            <h3>Time Saved</h3>
+                            <div class="card-value">4.2 hrs</div>
+                            <div class="card-change positive">This week</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="quick-actions">
+                <h2>Quick Actions</h2>
+                <div class="actions-grid">
+                    <a href="upload.html" class="action-card primary">
+                        <div class="action-icon upload"></div>
+                        <h3>Upload Receipt</h3>
+                        <p>Add new expense</p>
+                    </a>
+                    <a href="#" class="action-card">
+                        <div class="action-icon review"></div>
+                        <h3>Review Pending</h3>
+                        <p>7 items waiting</p>
+                    </a>
+                    <a href="#" class="action-card">
+                        <div class="action-icon categorize"></div>
+                        <h3>Categorize</h3>
+                        <p>2 uncategorized</p>
+                    </a>
+                    <a href="#" class="action-card">
+                        <div class="action-icon report"></div>
+                        <h3>Generate Report</h3>
+                        <p>Export data</p>
+                    </a>
+                </div>
+            </section>
+
+            <!-- Recent Transactions -->
+            <section class="recent-transactions">
+                <div class="section-header">
+                    <h2>Recent Transactions</h2>
+                    <a href="#" class="view-all">View All</a>
+                </div>
+                <div class="transactions-table">
+                    <div class="table-header">
+                        <div class="col-vendor">Vendor</div>
+                        <div class="col-date">Date</div>
+                        <div class="col-amount">Amount</div>
+                        <div class="col-category">Category</div>
+                        <div class="col-status">Status</div>
+                    </div>
+                    <div class="table-body">
+                        <div class="transaction-row">
+                            <div class="col-vendor">
+                                <div class="vendor-info">
+                                    <div class="vendor-name">Starbucks Coffee</div>
+                                    <div class="vendor-detail">Food & Beverage</div>
+                                </div>
+                            </div>
+                            <div class="col-date">Today, 2:30 PM</div>
+                            <div class="col-amount">₹450</div>
+                            <div class="col-category">
+                                <span class="category-tag meals">Meals</span>
+                            </div>
+                            <div class="col-status">
+                                <span class="status-dot approved"></span>
+                                <span class="status-text">Approved</span>
+                            </div>
+                        </div>
+                        <div class="transaction-row">
+                            <div class="col-vendor">
+                                <div class="vendor-info">
+                                    <div class="vendor-name">Uber</div>
+                                    <div class="vendor-detail">Transportation</div>
+                                </div>
+                            </div>
+                            <div class="col-date">Yesterday, 6:15 PM</div>
+                            <div class="col-amount">₹280</div>
+                            <div class="col-category">
+                                <span class="category-tag transport">Transport</span>
+                            </div>
+                            <div class="col-status">
+                                <span class="status-dot pending"></span>
+                                <span class="status-text">Pending</span>
+                            </div>
+                        </div>
+                        <div class="transaction-row">
+                            <div class="col-vendor">
+                                <div class="vendor-info">
+                                    <div class="vendor-name">Office Depot</div>
+                                    <div class="vendor-detail">Office Supplies</div>
+                                </div>
+                            </div>
+                            <div class="col-date">Mar 18, 11:20 AM</div>
+                            <div class="col-amount">₹1,250</div>
+                            <div class="col-category">
+                                <span class="category-tag uncategorized">Uncategorized</span>
+                            </div>
+                            <div class="col-status">
+                                <span class="status-dot attention"></span>
+                                <span class="status-text">Needs Review</span>
+                            </div>
+                        </div>
+                        <div class="transaction-row">
+                            <div class="col-vendor">
+                                <div class="vendor-info">
+                                    <div class="vendor-name">Amazon Web Services</div>
+                                    <div class="vendor-detail">Cloud Services</div>
+                                </div>
+                            </div>
+                            <div class="col-date">Mar 17, 9:00 AM</div>
+                            <div class="col-amount">₹3,200</div>
+                            <div class="col-category">
+                                <span class="category-tag software">Software</span>
+                            </div>
+                            <div class="col-status">
+                                <span class="status-dot approved"></span>
+                                <span class="status-text">Approved</span>
+                            </div>
+                        </div>
+                        <div class="transaction-row">
+                            <div class="col-vendor">
+                                <div class="vendor-info">
+                                    <div class="vendor-name">Shell Petrol Pump</div>
+                                    <div class="vendor-detail">Fuel</div>
+                                </div>
+                            </div>
+                            <div class="col-date">Mar 16, 7:45 AM</div>
+                            <div class="col-amount">₹2,100</div>
+                            <div class="col-category">
+                                <span class="category-tag fuel">Fuel</span>
+                            </div>
+                            <div class="col-status">
+                                <span class="status-dot approved"></span>
+                                <span class="status-text">Approved</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
