@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Global Features
 function initGlobalFeatures() {
+    // Ensure the top-left logo/brand links to home
+    ensureNavBrandLink();
+
     // Smooth scrolling for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -49,6 +52,58 @@ function initGlobalFeatures() {
             }
         });
     });
+}
+
+// Make the navbar brand (logo + name) a link to the home page across pages
+function ensureNavBrandLink() {
+    const navBrand = document.querySelector('.nav .nav-brand') || document.querySelector('.nav-brand');
+    if (!navBrand) return;
+
+    // Compute asset path relative to current pages directory
+    const logoSrc = '../public/assets/img/logo.png';
+    const homeHref = 'index.html';
+
+    let link = navBrand.querySelector('a');
+    if (!link) {
+        // Create a single anchor and move existing children into it to avoid duplicates
+        link = document.createElement('a');
+        link.setAttribute('href', homeHref);
+        link.setAttribute('aria-label', 'CompliCopilot Home');
+        while (navBrand.firstChild) {
+            link.appendChild(navBrand.firstChild);
+        }
+        navBrand.appendChild(link);
+    } else {
+        // Normalize attributes and remove any duplicate siblings outside the link
+        link.setAttribute('href', homeHref);
+        link.setAttribute('aria-label', 'CompliCopilot Home');
+        Array.from(navBrand.children).forEach(child => {
+            if (child !== link) navBrand.removeChild(child);
+        });
+    }
+
+    // Ensure there is exactly one logo inside the link
+    let img = link.querySelector('img.logo') || link.querySelector('img');
+    if (!img) {
+        img = document.createElement('img');
+        img.className = 'logo';
+        img.src = logoSrc;
+        img.alt = 'CompliCopilot logo';
+        link.insertBefore(img, link.firstChild);
+    } else {
+        img.classList.add('logo');
+        if (!img.getAttribute('src')) img.src = logoSrc;
+        if (!img.getAttribute('alt')) img.alt = 'CompliCopilot logo';
+    }
+
+    // Ensure brand text exists once inside the link
+    let name = link.querySelector('.brand-name');
+    if (!name) {
+        name = document.createElement('span');
+        name.className = 'brand-name';
+        name.textContent = 'CompliCopilot';
+        link.appendChild(name);
+    }
 }
 
 // Landing Page Initialization
@@ -215,8 +270,10 @@ function initDashboard() {
             filename: row.dataset.filename || ''
         }));
     };
+    // Hydrate from localStorage any saved receipts from upload
+    const saved = JSON.parse(localStorage.getItem('ccp_new_receipts') || '[]');
     const store = {
-        all: toData(),
+        all: toData().concat(saved),
         filtered: [],
         filters: { gstin: '' }
     };
@@ -269,6 +326,7 @@ function initDashboard() {
     const $ = (s)=>document.getElementById(s);
     const gstinInput = $('filter-search');
     const exportBtn = $('export-csv');
+    const genReport = document.getElementById('generate-report');
 
     gstinInput && gstinInput.addEventListener('input', (e)=>{
         store.filters.gstin = e.target.value.trim();
@@ -287,6 +345,33 @@ function initDashboard() {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = 'receipts.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+
+    // Generate Google Docs-style report (HTML .doc download)
+    genReport && genReport.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const rows = store.filtered.length ? store.filtered : store.all;
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>CompliCopilot Report</title>
+        <style>
+            body{font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111}
+            h1{font-size:22px;margin:16px 0}
+            table{border-collapse:collapse;width:100%;font-size:14px}
+            th,td{border:1px solid #ccc;padding:8px;text-align:left}
+            th{background:#f2f2f2}
+        </style></head><body>
+        <h1>CompliCopilot Expense Report</h1>
+        <table><thead><tr>
+            <th>Vendor</th><th>Date</th><th>Amount (₹)</th><th>Category</th><th>Status</th><th>GSTIN</th>
+        </tr></thead><tbody>
+        ${rows.map(r => `<tr><td>${escapeHtml(r.vendor||'')}</td><td>${escapeHtml(r.date||'')}</td><td>${(r.amount||0).toLocaleString()}</td><td>${escapeHtml(r.category||'')}</td><td>${escapeHtml(r.status||'')}</td><td>${escapeHtml(r.gstin||'')}</td></tr>`).join('')}
+        </tbody></table>
+        </body></html>`;
+        const blob = new Blob([html], {type:'application/msword'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'CompliCopilot-Report.doc';
         a.click();
         URL.revokeObjectURL(a.href);
     });
@@ -390,12 +475,26 @@ function initUploadPage() {
             const submitButton = this.querySelector('button[type="submit"]');
             addLoadingState(submitButton);
             
-            // Simulate saving
+            // Simulate saving then redirect to dashboard with updated data
             setTimeout(() => {
                 removeLoadingState(submitButton);
-                showStep('success');
-                updateProgressStep(4);
-            }, 2000);
+                // Collect review data
+                const newReceipt = {
+                    id: String(Date.now()),
+                    vendor: (document.getElementById('vendor-name')?.value || '').trim() || 'Unknown Vendor',
+                    date: document.getElementById('receipt-date')?.value || new Date().toISOString().slice(0,10),
+                    amount: parseFloat(document.getElementById('total-amount')?.value || '0') || 0,
+                    category: document.getElementById('expense-category')?.value || 'uncategorized',
+                    status: 'approved',
+                    gstin: document.getElementById('gst-number')?.value || '',
+                    filename: 'uploaded-' + (document.getElementById('file-input')?.files?.[0]?.name || 'receipt')
+                };
+                const existing = JSON.parse(localStorage.getItem('ccp_new_receipts') || '[]');
+                existing.unshift(newReceipt);
+                localStorage.setItem('ccp_new_receipts', JSON.stringify(existing));
+                // Navigate back to dashboard
+                window.location.href = 'dashboard.html';
+            }, 1200);
         });
     }
     
@@ -592,6 +691,11 @@ function showNotification(title, message, type = 'info') {
         toast.style.transform = 'translateY(-6px)';
         setTimeout(() => toast.remove(), 220);
     }, 2800);
+}
+
+// Small HTML escaper for report generation
+function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 }
 
 // Cursor tracing light: fluid, non-blocking, rAF-driven

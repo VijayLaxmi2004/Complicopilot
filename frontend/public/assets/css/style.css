@@ -1724,3 +1724,103 @@ select:-webkit-autofill {
         grid-template-columns: 1fr;
     }
 }
+
+/* Filters toolbar */
+.filters-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm);
+  margin: var(--spacing-lg) 0 var(--spacing-xl);
+}
+.filters-toolbar .filters-left,
+.filters-toolbar .filters-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+.filters-toolbar input[type="search"],
+.filters-toolbar input[type="date"],
+.filters-toolbar select {
+  height: 40px;
+  padding: 0 var(--spacing-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.btn-small {
+  padding: 8px 12px;
+  min-height: 34px;
+  font-size: 14px;
+}
+
+/* Drawer */
+.drawer {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 1200;
+}
+.drawer.active { display: block; }
+.drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(2px);
+}
+.drawer-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: min(480px, 95vw);
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform .25s ease;
+  display: flex;
+  flex-direction: column;
+}
+.drawer.active .drawer-panel { transform: translateX(0); }
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+}
+.drawer-body {
+  padding: var(--spacing-md);
+  overflow: auto;
+  gap: var(--spacing-md);
+  display: grid;
+}
+.drawer-field {
+  display: grid;
+  gap: 6px;
+}
+.drawer-field label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+.drawer-field input, .drawer-field select, .drawer-field textarea {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 10px 12px;
+}
+.drawer-actions {
+  margin-top: var(--spacing-md);
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+/* Results meta */
+.results-meta { display:flex; align-items:center; gap: var(--spacing-sm); }
+#results-count { color: var(--text-secondary); font-size: var(--font-size-sm); }
