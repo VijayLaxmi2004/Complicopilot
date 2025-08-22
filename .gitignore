@@ -1,0 +1,29 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+coverage/
+dist/
+.parcel-cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Env & OS
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Docker
+**/.env.docker
+
+# VSCode
+.vscode/

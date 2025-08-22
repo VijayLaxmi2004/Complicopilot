@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - CompliCopilot</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../public/assets/css/style.css">
 </head>
 <body>
     <!-- Header -->
     <header class="header dashboard-header">
         <nav class="nav">
             <div class="nav-brand">
-                <img src="assets/img/logo.png" alt="CompliCopilot" class="logo">
+                <img src="../public/assets/img/logo.png" alt="CompliCopilot" class="logo">
                 <span class="brand-name">CompliCopilot</span>
             </div>
             <div class="dashboard-nav">
-                <span class="welcome-text">Hello, <span id="user-name">Strikers</span>!</span>
+                
                 <a href="upload.html" class="btn-primary glow">Upload New Receipt</a>
                 <div class="user-menu">
                     <button class="user-avatar" onclick="toggleUserMenu()">
@@ -40,7 +40,7 @@
             <section class="overview">
                 <div class="overview-grid">
                     <div class="overview-card">
-                        <div class="card-icon spending"></div>
+                        <div class="card-icon spending"><img class="icon-img" alt="Spending" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4b0.png" /></div>
                         <div class="card-content">
                             <h3>This Month's Spending</h3>
                             <div class="card-value">₹45,280</div>
@@ -48,7 +48,7 @@
                         </div>
                     </div>
                     <div class="overview-card">
-                        <div class="card-icon pending"></div>
+                        <div class="card-icon pending"><img class="icon-img" alt="Pending" src="https://twemoji.maxcdn.com/v/latest/72x72/23f3.png" /></div>
                         <div class="card-content">
                             <h3>Pending Approvals</h3>
                             <div class="card-value">7</div>
@@ -56,7 +56,7 @@
                         </div>
                     </div>
                     <div class="overview-card">
-                        <div class="card-icon uncategorized"></div>
+                        <div class="card-icon uncategorized"><img class="icon-img" alt="Uncategorized" src="https://twemoji.maxcdn.com/v/latest/72x72/2753.png" /></div>
                         <div class="card-content">
                             <h3>Uncategorized</h3>
                             <div class="card-value">2</div>
@@ -64,7 +64,7 @@
                         </div>
                     </div>
                     <div class="overview-card">
-                        <div class="card-icon saved"></div>
+                        <div class="card-icon saved"><img class="icon-img" alt="Time Saved" src="https://twemoji.maxcdn.com/v/latest/72x72/23f1.png" /></div>
                         <div class="card-content">
                             <h3>Time Saved</h3>
                             <div class="card-value">4.2 hrs</div>
@@ -79,22 +79,22 @@
                 <h2>Quick Actions</h2>
                 <div class="actions-grid">
                     <a href="upload.html" class="action-card primary">
-                        <div class="action-icon upload"></div>
+                        <div class="action-icon upload"><img class="icon-img" alt="Upload" src="https://twemoji.maxcdn.com/v/latest/72x72/2b06.png" /></div>
                         <h3>Upload Receipt</h3>
                         <p>Add new expense</p>
                     </a>
                     <a href="#" class="action-card">
-                        <div class="action-icon review"></div>
+                        <div class="action-icon review"><img class="icon-img" alt="Review" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4dd.png" /></div>
                         <h3>Review Pending</h3>
                         <p>7 items waiting</p>
                     </a>
                     <a href="#" class="action-card">
-                        <div class="action-icon categorize"></div>
+                        <div class="action-icon categorize"><img class="icon-img" alt="Categorize" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4cb.png" /></div>
                         <h3>Categorize</h3>
                         <p>2 uncategorized</p>
                     </a>
                     <a href="#" class="action-card">
-                        <div class="action-icon report"></div>
+                        <div class="action-icon report"><img class="icon-img" alt="Report" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4ca.png" /></div>
                         <h3>Generate Report</h3>
                         <p>Export data</p>
                     </a>
@@ -207,6 +207,6 @@
         </div>
     </main>
 
-    <script src="assets/js/main.js"></script>
+    <script src="../public/assets/js/main.js"></script>
 </body>
 </html>

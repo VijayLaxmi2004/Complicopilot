@@ -1,18 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-page="auth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Ensure the page can tag itself for CSS/JS behavior -->
     <title>Sign In - CompliCopilot</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="../public/assets/css/style.css">
 </head>
-<body>
+<body data-route="auth">
     <!-- Header -->
     <header class="header">
         <nav class="nav">
             <div class="nav-brand">
                 <a href="index.html">
-                    <img src="assets/img/logo.png" alt="CompliCopilot" class="logo">
+                    <img src="../public/assets/img/logo.png" alt="CompliCopilot" class="logo">
                     <span class="brand-name">CompliCopilot</span>
                 </a>
             </div>
@@ -26,6 +27,9 @@
     <section class="auth">
         <div class="container">
             <div class="auth-container">
+                <div id="auth-loading" class="auth-loading-overlay" aria-hidden="true">
+                    <div class="auth-spinner" role="status" aria-label="Loading"></div>
+                </div>
                 <div class="auth-header">
                     <h1 id="auth-title">Welcome Back</h1>
                     <p id="auth-subtitle">Sign in to your CompliCopilot account</p>
@@ -36,12 +40,12 @@
                     <button class="tab-btn" data-tab="signup">Sign Up</button>
                 </div>
 
-                <form class="auth-form" id="auth-form">
+                <form class="auth-form" autocomplete="on">
                     <!-- Sign In Form -->
                     <div class="form-content active" id="signin-form">
                         <div class="form-group">
                             <label for="signin-email">Email Address</label>
-                            <input type="email" id="signin-email" name="email" required>
+                            <input type="email" id="signin-email" name="email" autocomplete="email" inputmode="email" required>
                         </div>
                         <div class="form-group">
                             <label for="signin-password">Password</label>
@@ -105,10 +109,18 @@
                         Microsoft
                     </button>
                 </div>
+
+                <!-- Dev-only admin sign-in (for development phase) -->
+                <div class="auth-divider" style="margin-top: 24px;">
+                    <span>developer shortcut</span>
+                </div>
+                <div class="dev-auth">
+                    <button id="dev-admin-btn" type="button" class="btn-secondary full-width">Sign in as Dev Admin</button>
+                </div>
             </div>
         </div>
     </section>
 
-    <script src="assets/js/main.js"></script>
+    <script src="../public/assets/js/main.js"></script>
 </body>
 </html>
