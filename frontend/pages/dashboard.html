@@ -36,43 +36,23 @@
     <!-- Dashboard Content -->
     <main class="dashboard">
         <div class="container">
-            <!-- Overview Cards -->
-            <section class="overview">
-                <div class="overview-grid">
-                    <div class="overview-card">
-                        <div class="card-icon spending"><img class="icon-img" alt="Spending" src="https://twemoji.maxcdn.com/v/latest/72x72/1f4b0.png" /></div>
-                        <div class="card-content">
-                            <h3>This Month's Spending</h3>
-                            <div class="card-value">₹45,280</div>
-                            <div class="card-change positive">+12% from last month</div>
-                        </div>
-                    </div>
-                    <div class="overview-card">
-                        <div class="card-icon pending"><img class="icon-img" alt="Pending" src="https://twemoji.maxcdn.com/v/latest/72x72/23f3.png" /></div>
-                        <div class="card-content">
-                            <h3>Pending Approvals</h3>
-                            <div class="card-value">7</div>
-                            <div class="card-change neutral">3 need attention</div>
-                        </div>
-                    </div>
-                    <div class="overview-card">
-                        <div class="card-icon uncategorized"><img class="icon-img" alt="Uncategorized" src="https://twemoji.maxcdn.com/v/latest/72x72/2753.png" /></div>
-                        <div class="card-content">
-                            <h3>Uncategorized</h3>
-                            <div class="card-value">2</div>
-                            <div class="card-change negative">Action required</div>
-                        </div>
-                    </div>
-                    <div class="overview-card">
-                        <div class="card-icon saved"><img class="icon-img" alt="Time Saved" src="https://twemoji.maxcdn.com/v/latest/72x72/23f1.png" /></div>
-                        <div class="card-content">
-                            <h3>Time Saved</h3>
-                            <div class="card-value">4.2 hrs</div>
-                            <div class="card-change positive">This week</div>
-                        </div>
+
+            <!-- Filters Toolbar -->
+            <section class="filters-toolbar" aria-label="Filters">
+                <div class="filters-left" style="display:flex; gap:12px; align-items:center;">
+                    <div class="input-wrap" style="width:280px;">
+                        <input id="filter-search" type="search"
+                               placeholder="Search GSTIN (e.g., 27ABCDE1234F1Z5)…"
+                               aria-label="Search GSTIN" />
                     </div>
                 </div>
+                <div class="filters-right" style="display:flex; align-items:center; gap:12px;">
+                    <button id="export-csv" class="btn-primary">Export CSV</button>
+                </div>
             </section>
+
+            <!-- Overview Cards intentionally hidden; can be shown when needed -->
+            <section id="overview-section" class="overview" hidden></section>
 
             <!-- Quick Actions -->
             <section class="quick-actions">
@@ -105,7 +85,10 @@
             <section class="recent-transactions">
                 <div class="section-header">
                     <h2>Recent Transactions</h2>
-                    <a href="#" class="view-all">View All</a>
+                    <div class="results-meta">
+                        <span id="results-count">0 results</span>
+                        <a href="#" class="view-all">View All</a>
+                    </div>
                 </div>
                 <div class="transactions-table">
                     <div class="table-header">
@@ -115,8 +98,8 @@
                         <div class="col-category">Category</div>
                         <div class="col-status">Status</div>
                     </div>
-                    <div class="table-body">
-                        <div class="transaction-row">
+                    <div class="table-body" id="receipts-tbody">
+                        <div class="transaction-row" data-id="1" data-status="approved" data-category="meals" data-date="2025-03-19" data-amount="450" data-gstin="27ABCDE1234F1Z5" data-filename="starbucks-receipt-0319.jpg">
                             <div class="col-vendor">
                                 <div class="vendor-info">
                                     <div class="vendor-name">Starbucks Coffee</div>
@@ -133,7 +116,7 @@
                                 <span class="status-text">Approved</span>
                             </div>
                         </div>
-                        <div class="transaction-row">
+                        <div class="transaction-row" data-id="2" data-status="pending" data-category="transport" data-date="2025-03-18" data-amount="280" data-gstin="06PQRSX5678L1Z2" data-filename="uber-ride-0318.png">
                             <div class="col-vendor">
                                 <div class="vendor-info">
                                     <div class="vendor-name">Uber</div>
@@ -150,7 +133,7 @@
                                 <span class="status-text">Pending</span>
                             </div>
                         </div>
-                        <div class="transaction-row">
+                        <div class="transaction-row" data-id="3" data-status="needs review" data-category="uncategorized" data-date="2025-03-18" data-amount="1250" data-gstin="29LMNOP9012Q1Z8" data-filename="office-supplies-0318.pdf">
                             <div class="col-vendor">
                                 <div class="vendor-info">
                                     <div class="vendor-name">Office Depot</div>
@@ -167,7 +150,7 @@
                                 <span class="status-text">Needs Review</span>
                             </div>
                         </div>
-                        <div class="transaction-row">
+                        <div class="transaction-row" data-id="4" data-status="approved" data-category="software" data-date="2025-03-17" data-amount="3200" data-gstin="09TUVWX3456Y1Z1" data-filename="aws-invoice-0317.pdf">
                             <div class="col-vendor">
                                 <div class="vendor-info">
                                     <div class="vendor-name">Amazon Web Services</div>
@@ -184,7 +167,7 @@
                                 <span class="status-text">Approved</span>
                             </div>
                         </div>
-                        <div class="transaction-row">
+                        <div class="transaction-row" data-id="5" data-status="approved" data-category="fuel" data-date="2025-03-16" data-amount="2100" data-gstin="33ABCDE6789F1Z3" data-filename="fuel-bill-0316.jpg">
                             <div class="col-vendor">
                                 <div class="vendor-info">
                                     <div class="vendor-name">Shell Petrol Pump</div>
@@ -207,6 +190,20 @@
         </div>
     </main>
 
+    <!-- Details Drawer -->
+    <aside id="receipt-drawer" class="drawer" aria-hidden="true" aria-label="Receipt details">
+        <div class="drawer-overlay" data-close-drawer></div>
+        <div class="drawer-panel" role="dialog" aria-modal="true">
+            <header class="drawer-header">
+                <h3 id="drawer-title">Receipt Details</h3>
+                <button class="drawer-close btn-secondary btn-small" data-close-drawer>Close</button>
+            </header>
+            <div class="drawer-body" id="drawer-body">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </aside>
+
     <script src="../public/assets/js/main.js"></script>
-</body>
-</html>
+    <script src="../public/assets/js/main.js"></script>
+</body></html>

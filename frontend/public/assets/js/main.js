@@ -98,204 +98,244 @@ function initAuthPage() {
     const formContents = document.querySelectorAll('.form-content');
     const authTitle = document.getElementById('auth-title');
     const authSubtitle = document.getElementById('auth-subtitle');
-    // Support both id="auth-form" and class="auth-form"
     const authForm = document.querySelector('.auth-form') || document.getElementById('auth-form');
     const authContainer = document.querySelector('.auth-container');
     const authOverlay = document.getElementById('auth-loading');
 
-    // Cursor-tracked ambient light: smoothly follow pointer inside container
+    // Cursor-tracked ambient light
     if (authContainer) {
-        let targetX = 0.5, targetY = 0.5; // 0..1
+        let targetX = 0.5, targetY = 0.2;
         let currentX = targetX, currentY = targetY;
         const ease = 0.15;
         let hasFocus = false;
-
-        const updateVars = () => {
+        const step = () => {
             currentX += (targetX - currentX) * ease;
             currentY += (targetY - currentY) * ease;
-            const xPerc = (currentX * 100).toFixed(2) + '%';
-            const yPerc = (currentY * 100).toFixed(2) + '%';
-            authContainer.style.setProperty('--spot-x', xPerc);
-            authContainer.style.setProperty('--spot-y', yPerc);
-            requestAnimationFrame(updateVars);
+            authContainer.style.setProperty('--spot-x', (currentX*100).toFixed(2)+'%');
+            authContainer.style.setProperty('--spot-y', (currentY*100).toFixed(2)+'%');
+            requestAnimationFrame(step);
         };
-        requestAnimationFrame(updateVars);
-
-        const setTarget = (e) => {
-            const rect = authContainer.getBoundingClientRect();
-            const x = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-            const y = Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1);
-            targetX = x; targetY = y;
-            // lift intensity slightly when moving (unless an input is focused)
+        requestAnimationFrame(step);
+        authContainer.addEventListener('mousemove', (e) => {
+            const r = authContainer.getBoundingClientRect();
+            targetX = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1);
+            targetY = Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1);
             if (!hasFocus) {
                 authContainer.style.setProperty('--spot-a', '0.30');
-                clearTimeout(setTarget._t);
-                setTarget._t = setTimeout(() => authContainer.style.setProperty('--spot-a', '0.24'), 220);
+                clearTimeout(step._t);
+                step._t = setTimeout(() => authContainer.style.setProperty('--spot-a','0.24'), 220);
             }
-        };
-
-        authContainer.addEventListener('mousemove', setTarget);
-        authContainer.addEventListener('mouseleave', () => {
-            targetX = 0.5; targetY = 0.5; // center
         });
-
-        // While typing/focused, keep the glow calmer and pause boosts
-        authContainer.addEventListener('focusin', () => {
-            hasFocus = true;
-            authContainer.style.setProperty('--spot-a', '0.20');
-        });
-        authContainer.addEventListener('focusout', () => {
-            hasFocus = false;
-            authContainer.style.setProperty('--spot-a', '0.24');
-        });
+        authContainer.addEventListener('mouseleave', ()=>{ targetX=0.5; targetY=0.2; });
+        authContainer.addEventListener('focusin', ()=>{ hasFocus=true; authContainer.style.setProperty('--spot-a','0.20'); });
+        authContainer.addEventListener('focusout', ()=>{ hasFocus=false; authContainer.style.setProperty('--spot-a','0.24'); });
     }
-    
-    // Tab switching
+
+    // Tab switching (safe if only signin exists)
+    const signinFormEl = document.getElementById('signin-form');
+    const signupFormEl = document.getElementById('signup-form');
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const targetTab = button.getAttribute('data-tab');
-            
-            // Update active tab
             tabButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
-            
-            // Update form content
-            formContents.forEach(content => content.classList.remove('active'));
-            
-            if (targetTab === 'signin') {
-                signinForm.classList.add('active');
-                authTitle.textContent = 'Welcome Back';
-                authSubtitle.textContent = 'Sign in to your CompliCopilot account';
+            formContents.forEach(c => c.classList.remove('active'));
+            if (targetTab === 'signin' && signinFormEl) {
+                signinFormEl.classList.add('active');
+                authTitle && (authTitle.textContent = 'Welcome Back');
+                authSubtitle && (authSubtitle.textContent = 'Sign in to your CompliCopilot account');
                 authContainer && authContainer.classList.remove('glow-strong');
-            } else {
-                signupForm.classList.add('active');
-                authTitle.textContent = 'Create Account';
-                authSubtitle.textContent = 'Join thousands of small businesses';
+            } else if (targetTab === 'signup' && signupFormEl) {
+                signupFormEl.classList.add('active');
+                authTitle && (authTitle.textContent = 'Create Account');
+                authSubtitle && (authSubtitle.textContent = 'Join thousands of small businesses');
                 authContainer && authContainer.classList.add('glow-strong');
             }
         });
     });
-    
-    // Form submission (guarded if the form is present)
+
+    // Form submission
     if (authForm) {
         authForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
             const submitButton = this.querySelector('button[type="submit"]');
-            
             addLoadingState(submitButton);
             if (authOverlay) authOverlay.classList.add('active');
-            
-            // Simulate API call
+
             setTimeout(() => {
                 removeLoadingState(submitButton);
                 if (authOverlay) authOverlay.classList.remove('active');
-                
-                // Simulate successful authentication
-                showNotification('Success!', `Account ${activeTab === 'signin' ? 'signed in' : 'created'} successfully`, 'success');
-                
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1500);
-            }, 2000);
-        });
-    }
-    
-    // Password confirmation validation for signup
-    const signupConfirm = document.getElementById('signup-confirm');
-    const signupPassword = document.getElementById('signup-password');
-    
-    if (signupConfirm && signupPassword) {
-        signupConfirm.addEventListener('input', function() {
-            if (this.value && this.value !== signupPassword.value) {
-                this.setCustomValidity('Passwords do not match');
-                this.style.borderColor = 'var(--error)';
-            } else {
-                this.setCustomValidity('');
-                this.style.borderColor = 'var(--border)';
-            }
-        });
-        
-        signupPassword.addEventListener('input', function() {
-            if (signupConfirm.value && signupConfirm.value !== this.value) {
-                signupConfirm.setCustomValidity('Passwords do not match');
-                signupConfirm.style.borderColor = 'var(--error)';
-            } else {
-                signupConfirm.setCustomValidity('');
-                signupConfirm.style.borderColor = 'var(--border)';
-            }
-        });
-    }
-    
-        // Dev admin shortcut
-        const devBtn = document.getElementById('dev-admin-btn');
-        if (devBtn) {
-            devBtn.addEventListener('click', () => {
+                showNotification('Success!', 'Signed in successfully', 'success');
+                // optional stub user
                 const user = { name: 'Admin', email: 'admin@complicopilot.dev', role: 'admin' };
                 localStorage.setItem('ccp_user', JSON.stringify(user));
-                showNotification('Signed in', 'Developer admin session started', 'success');
-                setTimeout(() => window.location.href = 'dashboard.html', 600);
-            });
-        }
+                setTimeout(() => window.location.href = 'dashboard.html', 800);
+            }, 1200);
+        });
+    }
+
+    // Dev admin shortcut
+    const devBtn = document.getElementById('dev-admin-btn');
+    if (devBtn) {
+        devBtn.addEventListener('click', () => {
+            const user = { name: 'Admin', email: 'admin@complicopilot.dev', role: 'admin' };
+            localStorage.setItem('ccp_user', JSON.stringify(user));
+            showNotification('Signed in', 'Developer admin session started', 'success');
+            setTimeout(() => window.location.href = 'dashboard.html', 600);
+        });
+    }
 }
 
 // Dashboard Initialization
 function initDashboard() {
-    // User menu toggle
+    // Existing avatar dropdown
     const userAvatar = document.querySelector('.user-avatar');
     const userDropdown = document.getElementById('user-dropdown');
-    
     if (userAvatar && userDropdown) {
-        userAvatar.addEventListener('click', () => {
-            userDropdown.classList.toggle('active');
-        });
-        
-        // Close dropdown when clicking outside
+        userAvatar.addEventListener('click', () => userDropdown.classList.toggle('active'));
         document.addEventListener('click', (e) => {
             if (!userAvatar.contains(e.target) && !userDropdown.contains(e.target)) {
                 userDropdown.classList.remove('active');
             }
         });
     }
-    
-    // Animate overview cards
-    const overviewCards = document.querySelectorAll('.overview-card');
-    
-    overviewCards.forEach((card, index) => {
-        card.style.animation = 'slideInFromLeft 0.6s ease-out forwards';
-        card.style.animationDelay = `${index * 0.1}s`;
-    });
-    
-    // Transaction row interactions
-    const transactionRows = document.querySelectorAll('.transaction-row');
-    
-    transactionRows.forEach(row => {
-        row.addEventListener('click', function() {
-            // Simulate opening transaction details
-            showNotification('Transaction Details', 'Opening transaction details...', 'info');
-        });
-    });
-    
-    // Add CSS animations for dashboard
-    if (!document.querySelector('#dashboard-animations')) {
-        const style = document.createElement('style');
-        style.id = 'dashboard-animations';
-        style.textContent = `
-            @keyframes slideInFromLeft {
-                from {
-                    opacity: 0;
-                    transform: translateX(-30px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-        `;
-        document.head.appendChild(style);
+
+    // Build store from current rows
+    const tbody = document.getElementById('receipts-tbody') || document.querySelector('.table-body');
+    const toData = () => {
+        const rows = Array.from((tbody || document).querySelectorAll('.transaction-row'));
+        return rows.map((row, i) => ({
+            id: row.dataset.id || String(i+1),
+            vendor: row.querySelector('.vendor-name')?.textContent.trim() || '',
+            date: row.dataset.date || row.querySelector('.col-date')?.textContent.trim() || '',
+            amount: parseFloat(row.dataset.amount || (row.querySelector('.col-amount')?.textContent.replace(/[^\d.]/g,'') || '0')),
+            category: row.dataset.category || row.querySelector('.category-tag')?.className.split(' ').pop() || '',
+            status: row.dataset.status || row.querySelector('.status-text')?.textContent.trim().toLowerCase() || '',
+            gstin: row.dataset.gstin || '',
+            filename: row.dataset.filename || ''
+        }));
+    };
+    const store = {
+        all: toData(),
+        filtered: [],
+        filters: { gstin: '' }
+    };
+
+    const countEl = document.getElementById('results-count');
+
+    function applyFilters() {
+        const q = (store.filters.gstin || '').replace(/\s+/g,'').toLowerCase();
+        let data = [...store.all];
+        if (q) data = data.filter(d => (d.gstin || '').replace(/\s+/g,'').toLowerCase().includes(q));
+        store.filtered = data;
+        renderTable(data);
+        if (countEl) countEl.textContent = `${data.length} result${data.length===1?'':'s'}`;
     }
+
+    function renderTable(data) {
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'transaction-row';
+            row.dataset.id = item.id;
+            row.dataset.status = item.status;
+            row.dataset.category = item.category;
+            row.dataset.date = item.date;
+            row.dataset.amount = String(item.amount);
+            row.dataset.gstin = item.gstin || '';
+            row.dataset.filename = item.filename || '';
+            row.innerHTML = `
+                <div class="col-vendor">
+                    <div class="vendor-info">
+                        <div class="vendor-name">${item.vendor}</div>
+                        <div class="vendor-detail">${item.category ? item.category.charAt(0).toUpperCase()+item.category.slice(1) : ''}</div>
+                    </div>
+                </div>
+                <div class="col-date">${item.date}</div>
+                <div class="col-amount">₹${item.amount.toLocaleString()}</div>
+                <div class="col-category"><span class="category-tag ${item.category || 'uncategorized'}">${item.category || 'Uncategorized'}</span></div>
+                <div class="col-status">
+                    <span class="status-dot ${item.status.replace(' ','-')}"></span>
+                    <span class="status-text">${item.status.replace('-', ' ')}</span>
+                </div>
+            `;
+            row.addEventListener('click', () => openDrawer(item));
+            tbody.appendChild(row);
+        });
+    }
+
+    // Wire only GSTIN search and CSV export
+    const $ = (s)=>document.getElementById(s);
+    const gstinInput = $('filter-search');
+    const exportBtn = $('export-csv');
+
+    gstinInput && gstinInput.addEventListener('input', (e)=>{
+        store.filters.gstin = e.target.value.trim();
+        applyFilters();
+    });
+
+    exportBtn && exportBtn.addEventListener('click', ()=>{
+        const rows = store.filtered.length ? store.filtered : store.all;
+        const header = ['Vendor','Date','Amount','Category','Status','GSTIN'];
+        const csv = [header.join(',')]
+            .concat(rows.map(r =>
+                `"${(r.vendor||'').replace(/"/g,'""')}",${r.date||''},${r.amount||0},"${r.category||''}",${r.status||''},"${r.gstin||''}"`
+            ))
+            .join('\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'receipts.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+
+    // Drawer
+    const drawer = document.getElementById('receipt-drawer');
+    const drawerBody = document.getElementById('drawer-body');
+    function openDrawer(item) {
+        if (!drawer || !drawerBody) return;
+        drawer.classList.add('active');
+        drawer.setAttribute('aria-hidden','false');
+        drawerBody.innerHTML = `
+            <div class="drawer-field">
+                <label>Vendor</label>
+                <input type="text" value="${item.vendor}">
+            </div>
+            <div class="drawer-field">
+                <label>Date</label>
+                <input type="text" value="${item.date}">
+            </div>
+            <div class="drawer-field">
+                <label>Amount</label>
+                <input type="text" value="₹${item.amount.toLocaleString()}">
+            </div>
+            <div class="drawer-field">
+                <label>Category</label>
+                <select>
+                    <option ${item.category==='meals'?'selected':''}>meals</option>
+                    <option ${item.category==='transport'?'selected':''}>transport</option>
+                    <option ${item.category==='software'?'selected':''}>software</option>
+                    <option ${item.category==='fuel'?'selected':''}>fuel</option>
+                    <option ${item.category==='uncategorized'?'selected':''}>uncategorized</option>
+                </select>
+            </div>
+            <div class="drawer-actions">
+                <button class="btn-secondary" data-close-drawer>Close</button>
+                <button class="btn-primary">Save</button>
+            </div>
+        `;
+    }
+    drawer && drawer.addEventListener('click', (e)=>{
+        if (e.target.matches('[data-close-drawer]')) {
+            drawer.classList.remove('active');
+            drawer.setAttribute('aria-hidden','true');
+        }
+    });
+
+    // Initial render
+    applyFilters();
 }
 
 // Upload Page Initialization
@@ -386,71 +426,49 @@ function initUploadPage() {
     function simulateProcessing(file) {
         const processSteps = document.querySelectorAll('.process-item');
         let currentStep = 0;
-        
         const processInterval = setInterval(() => {
             if (currentStep < processSteps.length) {
-                processSteps[currentStep].classList.add('active');
-                
-                // Update process icon
-                const icon = processSteps[currentStep].querySelector('.process-icon');
-                if (currentStep === processSteps.length - 1) {
-                    icon.textContent = '✓';
-                } else {
-                    icon.textContent = '⟳';
+                const step = processSteps[currentStep];
+                step.classList.add('active');
+                const icon = step.querySelector('.process-icon');
+                if (icon) {
+                    if (currentStep === 0) icon.textContent = '✓';
+                    else icon.textContent = '⟳';
                 }
-                
                 currentStep++;
             } else {
                 clearInterval(processInterval);
-                
-                // Mark all as complete
-                processSteps.forEach(step => {
-                    const icon = step.querySelector('.process-icon');
-                    icon.textContent = '✓';
-                    step.classList.add('active');
+                processSteps.forEach((s, i) => {
+                    const icon = s.querySelector('.process-icon');
+                    if (icon) icon.textContent = '✓';
+                    s.classList.add('active');
                 });
-                
-                // Move to review step
-                setTimeout(() => {
-                    showStep('review');
-                    updateProgressStep(3);
-                    loadReceiptPreview(file);
-                }, 1000);
+                // Load preview and move to review
+                loadReceiptPreview(file);
+                showStep('review');
+                updateProgressStep(3);
             }
-        }, 800);
+        }, 700);
     }
     
-    // Load receipt preview
     function loadReceiptPreview(file) {
         const previewImg = document.getElementById('receipt-preview');
-        if (previewImg && file.type.startsWith('image/')) {
+        if (!previewImg) return;
+        if (file && file.type && file.type.startsWith('image/')) {
             const reader = new FileReader();
-            reader.onload = function(e) {
-                previewImg.src = e.target.result;
-            };
+            reader.onload = (e) => { previewImg.src = e.target.result; };
             reader.readAsDataURL(file);
-        } else if (previewImg) {
-            // For PDF or other files, show placeholder
-            previewImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMjQyNDI0Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzY2NjY2NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkRvY3VtZW50IFByZXZpZXc8L3RleHQ+PC9zdmc+';
+        } else {
+            previewImg.src = '../public/assets/img/logo.png';
         }
     }
-    
-    // Step navigation
+
     function showStep(stepName) {
-        const steps = ['upload', 'processing', 'review', 'success'];
-        steps.forEach(step => {
-            const element = document.getElementById(`${step}-step`);
-            if (element) {
-                element.classList.toggle('active', step === stepName);
-            }
-        });
-    }
-    
-    // Update progress indicator
-    function updateProgressStep(stepNumber) {
-        const steps = document.querySelectorAll('.step');
-        steps.forEach((step, index) => {
-            step.classList.toggle('active', index + 1 <= stepNumber);
+        const ids = ['upload','processing','review','success'];
+        ids.forEach(id => {
+            const el = document.getElementById(`${id}-step`);
+            if (!el) return;
+            el.classList.toggle('active', id === stepName);
         });
     }
 }
@@ -649,7 +667,6 @@ function showNotification(title, message, type = 'info') {
     if (e.target && /^(INPUT|TEXTAREA|SELECT)$/i.test(e.target.tagName)) {
       paused = false;
       restoreLight();
-      // Kick a position update after resume
       if (!rafId) rafId = requestAnimationFrame(tick);
     }
   }
