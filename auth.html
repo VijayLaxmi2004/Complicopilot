@@ -32,79 +32,61 @@
                 </div>
 
                 <div class="auth-tabs">
-                    <button class="tab-btn active" data-tab="signin">Sign In</button>
-                    <button class="tab-btn" data-tab="signup">Sign Up</button>
+                    <button class="tab-btn active" data-tab="signin">Log In</button>
                 </div>
 
-                <form class="auth-form" id="auth-form">
-                    <!-- Sign In Form -->
-                    <div class="form-content active" id="signin-form">
-                        <div class="form-group">
-                            <label for="signin-email">Email Address</label>
-                            <input type="email" id="signin-email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="signin-password">Password</label>
-                            <input type="password" id="signin-password" name="password" required>
-                        </div>
-                        <div class="form-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="remember">
-                                <span class="checkmark"></span>
-                                Remember me
-                            </label>
-                            <a href="#" class="forgot-password">Forgot password?</a>
-                        </div>
-                        <button type="submit" class="btn-primary glow full-width">Sign In</button>
+                <!-- Log In Form -->
+                <form class="auth-form form-content active" id="signin-form">
+                    <div class="form-group">
+                        <label for="signin-email">Email Address</label>
+                        <input type="email" id="signin-email" name="email" required>
                     </div>
-
-                    <!-- Sign Up Form -->
-                    <div class="form-content" id="signup-form">
-                        <div class="form-group">
-                            <label for="signup-name">Full Name</label>
-                            <input type="text" id="signup-name" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="signup-email">Email Address</label>
-                            <input type="email" id="signup-email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="signup-company">Company Name</label>
-                            <input type="text" id="signup-company" name="company" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="signup-password">Password</label>
-                            <input type="password" id="signup-password" name="password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="signup-confirm">Confirm Password</label>
-                            <input type="password" id="signup-confirm" name="confirm_password" required>
-                        </div>
-                        <div class="form-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="terms" required>
-                                <span class="checkmark"></span>
-                                I agree to the <a href="#">Terms of Service</a>
-                            </label>
-                        </div>
-                        <button type="submit" class="btn-primary glow full-width">Create Account</button>
+                    <div class="form-group">
+                        <label for="signin-password">Password</label>
+                        <input type="password" id="signin-password" name="password" required>
                     </div>
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="remember">
+                            <span class="checkmark"></span>
+                            Remember me
+                        </label>
+                        <a href="#" class="forgot-password">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="btn-primary glow full-width">Log In</button>
                 </form>
 
-                <div class="auth-divider">
-                    <span>or continue with</span>
-                </div>
-
-                <div class="social-auth">
-                    <button class="btn-social google">
-                        <span class="social-icon">G</span>
-                        Google
-                    </button>
-                    <button class="btn-social microsoft">
-                        <span class="social-icon">M</span>
-                        Microsoft
-                    </button>
-                </div>
+                <!-- Sign Up Form -->
+                <form class="auth-form form-content" id="signup-form">
+                    <div class="form-group">
+                        <label for="signup-name">Full Name</label>
+                        <input type="text" id="signup-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-email">Email Address</label>
+                        <input type="email" id="signup-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-company">Company Name</label>
+                        <input type="text" id="signup-company" name="company" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-confirm">Confirm Password</label>
+                        <input type="password" id="signup-confirm" name="confirm_password" required>
+                    </div>
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="terms" required>
+                            <span class="checkmark"></span>
+                            I agree to the <a href="#">Terms of Service</a>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary glow full-width">Create Account</button>
+                </form>
             </div>
         </div>
     </section>

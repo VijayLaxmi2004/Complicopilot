@@ -98,7 +98,8 @@ function initAuthPage() {
     const formContents = document.querySelectorAll('.form-content');
     const authTitle = document.getElementById('auth-title');
     const authSubtitle = document.getElementById('auth-subtitle');
-    const authForm = document.getElementById('auth-form');
+    const signinForm = document.getElementById('signin-form');
+    const signupForm = document.getElementById('signup-form');
     
     // Tab switching
     tabButtons.forEach(button => {
@@ -111,41 +112,125 @@ function initAuthPage() {
             
             // Update form content
             formContents.forEach(content => content.classList.remove('active'));
-            document.getElementById(`${targetTab}-form`).classList.add('active');
             
-            // Update title and subtitle
             if (targetTab === 'signin') {
+                signinForm.classList.add('active');
                 authTitle.textContent = 'Welcome Back';
                 authSubtitle.textContent = 'Sign in to your CompliCopilot account';
             } else {
+                signupForm.classList.add('active');
                 authTitle.textContent = 'Create Account';
                 authSubtitle.textContent = 'Join thousands of small businesses';
             }
         });
     });
     
-    // Form submission
-    authForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
-        const submitButton = this.querySelector('button[type="submit"]');
-        
-        addLoadingState(submitButton);
-        
-        // Simulate API call
-        setTimeout(() => {
-            removeLoadingState(submitButton);
+    // Sign In Form submission
+    if (signinForm) {
+        signinForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            // Simulate successful authentication
-            showNotification('Success!', `Account ${activeTab === 'signin' ? 'signed in' : 'created'} successfully`, 'success');
+            const email = document.getElementById('signin-email').value;
+            const password = document.getElementById('signin-password').value;
+            const submitButton = this.querySelector('button[type="submit"]');
             
-            // Redirect to dashboard
+            // Basic validation
+            if (!email || !password) {
+                showNotification('Error', 'Please fill in all fields', 'error');
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showNotification('Error', 'Please enter a valid email address', 'error');
+                return;
+            }
+            
+            addLoadingState(submitButton);
+            
+            // Simulate API call
             setTimeout(() => {
-                window.location.href = 'dashboard.html';
+                removeLoadingState(submitButton);
+                
+                // Save user data
+                saveToStorage('user', {
+                    name: email.split('@')[0],
+                    email: email,
+                    company: 'Your Company',
+                    avatar: email.charAt(0).toUpperCase()
+                });
+                
+                showNotification('Success!', 'Signed in successfully', 'success');
+                
+                // Redirect to dashboard
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
             }, 1500);
-        }, 2000);
-    });
+        });
+    }
+    
+    // Sign Up Form submission
+    if (signupForm) {
+        signupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const company = document.getElementById('signup-company').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm').value;
+            const terms = this.querySelector('input[name="terms"]').checked;
+            const submitButton = this.querySelector('button[type="submit"]');
+            
+            // Validation
+            if (!name || !email || !company || !password || !confirmPassword) {
+                showNotification('Error', 'Please fill in all fields', 'error');
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showNotification('Error', 'Please enter a valid email address', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showNotification('Error', 'Passwords do not match', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showNotification('Error', 'Password must be at least 6 characters long', 'error');
+                return;
+            }
+            
+            if (!terms) {
+                showNotification('Error', 'Please accept the terms of service', 'error');
+                return;
+            }
+            
+            addLoadingState(submitButton);
+            
+            // Simulate API call
+            setTimeout(() => {
+                removeLoadingState(submitButton);
+                
+                // Save user data
+                saveToStorage('user', {
+                    name: name,
+                    email: email,
+                    company: company,
+                    avatar: name.charAt(0).toUpperCase()
+                });
+                
+                showNotification('Success!', 'Account created successfully', 'success');
+                
+                // Redirect to dashboard
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            }, 1500);
+        });
+    }
     
     // Password confirmation validation for signup
     const signupConfirm = document.getElementById('signup-confirm');
@@ -153,21 +238,35 @@ function initAuthPage() {
     
     if (signupConfirm && signupPassword) {
         signupConfirm.addEventListener('input', function() {
-            if (this.value !== signupPassword.value) {
+            if (this.value && this.value !== signupPassword.value) {
                 this.setCustomValidity('Passwords do not match');
+                this.style.borderColor = 'var(--error)';
             } else {
                 this.setCustomValidity('');
+                this.style.borderColor = 'var(--border)';
             }
         });
         
         signupPassword.addEventListener('input', function() {
             if (signupConfirm.value && signupConfirm.value !== this.value) {
                 signupConfirm.setCustomValidity('Passwords do not match');
+                signupConfirm.style.borderColor = 'var(--error)';
             } else {
                 signupConfirm.setCustomValidity('');
+                signupConfirm.style.borderColor = 'var(--border)';
             }
         });
     }
+    
+    // Social auth buttons (demo functionality)
+    const socialButtons = document.querySelectorAll('.btn-social');
+    socialButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const provider = this.textContent.trim();
+            showNotification('Demo Mode', `${provider} authentication would open here`, 'info');
+        });
+    });
 }
 
 // Dashboard Initialization

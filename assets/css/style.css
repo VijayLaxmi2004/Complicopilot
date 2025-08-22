@@ -580,6 +580,11 @@ body {
     gap: var(--spacing-xs);
     cursor: pointer;
     color: var(--text-secondary);
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    display: none;
 }
 
 .checkmark {
@@ -589,6 +594,14 @@ body {
     border-radius: var(--radius-sm);
     position: relative;
     transition: var(--transition);
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkbox-label:hover .checkmark {
+    border-color: var(--accent-primary);
 }
 
 .checkbox-label input:checked + .checkmark {
@@ -598,10 +611,6 @@ body {
 
 .checkbox-label input:checked + .checkmark::after {
     content: "✓";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     color: white;
     font-size: 12px;
     font-weight: bold;
