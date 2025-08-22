@@ -14,12 +14,14 @@ Monorepo layout
 
 Quick start (frontend only)
 1) Install Node.js 18+
-2) Start a static server from `frontend/`:
-	 - Windows PowerShell:
-		 npm init -y; npm install http-server --save-dev; npm run start
-	 - Or run from workspace root (Docker section below for containers)
+2) From `frontend/`, serve static files (use any static server). Example with http-server:
 
-By default, the dev server serves at http://localhost:3000/frontend/pages/index.html
+	PowerShell:
+	- npm init -y
+	- npm install http-server --save-dev
+	- npx http-server -p 3000 ..\ -c-1
+
+By default, open: http://localhost:3000/frontend/pages/index.html
 
 Frontend pages
 - index.html (landing)
@@ -27,24 +29,35 @@ Frontend pages
 - dashboard.html (mock dashboard)
 - upload.html (drag-and-drop upload + simulated processing + review)
 
-Phase 0 readiness
-- Fixed CSS var `--text-muted` and added loading spinner + toasts.
-- Pages load assets via `../public/...` paths.
+Implemented so far
+- Ambient glow on auth with cursor-tracing spotlight; loading overlay spinner.
+- Dev-only “Sign in as Dev Admin” shortcut (localStorage stub) on auth page.
+- Home and dashboard icons added; button alignment and header polish.
+- Upload flow with drag-and-drop and simulated processing + review.
 
-Docker (local, optional)
-Note: The current compose file expects a FastAPI backend and Postgres. Until the backend is implemented, only the frontend service is useful.
+Docker (optional)
+The compose targets a FastAPI backend and Postgres. Frontend can be served statically without Docker.
 
-From the repo root:
-	- docker-compose -f docker/docker-compose.yml up --build
+From repo root:
+- docker-compose -f docker/docker-compose.yml up --build
 
-Known gaps (to be addressed in Phase 1+)
-- Service worker + manifest for PWA install/offline
-- FastAPI API endpoints and DB migrations
-- OCR/AI integrations and background processing
+Next steps (Phase 1+)
+- Service worker + manifest (PWA install/offline)
+- FastAPI endpoints for receipts, insights, compliance
+- Background OCR/AI integration and queue
+- Dashboard filters, details drawer, charts; bulk actions
 
 Troubleshooting
 - If assets 404, ensure you open pages under `/frontend/pages/...` when using a static server.
 - If using Docker for the frontend, confirm the Docker build context and COPY paths match the `frontend/` layout.
+
+Dev admin sign-in
+- On auth page, click “Sign in as Dev Admin” to jump to the dashboard (stores a mock user in localStorage).
+
+Git workflow (suggested)
+- Create a feature branch: `git checkout -b feat/ui-auth-glow`
+- Commit and push: `git add . && git commit -m "feat: ui updates" && git push -u origin feat/ui-auth-glow`
+- Open a PR to main.
 
 License
 MIT (pending)
