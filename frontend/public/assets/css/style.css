@@ -132,6 +132,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
+    flex-wrap: wrap;
 }
 
 .welcome-text {
@@ -150,9 +151,13 @@ body {
     background: var(--accent-gradient);
     border: none;
     color: white;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
 .user-avatar:hover {
@@ -207,10 +212,12 @@ body {
 .btn-secondary,
 .btn-hero,
 .btn-social {
-    padding: var(--spacing-xs) var(--spacing-md);
+    padding: 10px 16px;
+    min-height: 40px;
     border-radius: var(--radius-md);
     font-size: var(--font-size-base);
-    font-weight: 500;
+    font-weight: 600;
+    line-height: 1;
     text-decoration: none;
     border: none;
     cursor: pointer;
@@ -218,7 +225,10 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-xs);
+    gap: 8px;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
 }
 
 .btn-primary {
@@ -345,6 +355,8 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 24px;
+    position: relative;
+    overflow: hidden;
 }
 
 .feature-icon.capture { background: linear-gradient(135deg, #ff6b6b, #ee5a52); }
@@ -364,6 +376,14 @@ body {
     font-size: var(--font-size-sm);
 }
 
+/* PNGs inside feature circles */
+.feature-icon-img {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25));
+}
+
 /* Comparison Section */
 .comparison {
     padding: var(--spacing-2xl) 0;
@@ -373,6 +393,8 @@ body {
 .comparison-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    position: relative;
+    overflow: hidden;
     gap: var(--spacing-xl);
     margin-top: var(--spacing-xl);
 }
@@ -485,7 +507,55 @@ body {
     border: 1px solid var(--border);
     width: 100%;
     max-width: 450px;
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow), 0 0 36px rgba(0,212,255,0.12), 0 0 72px rgba(0,153,204,0.10);
+    position: relative;
+    /* cursor spotlight defaults */
+    --spot-x: 50%;
+    --spot-y: 50%;
+    --spot-a: 0.24; /* hotspot alpha */
+    --spot-boost: 0; /* increased on Sign Up */
+}
+
+/* Ambient bluish lighting (cursor-traced) */
+.auth-container::before {
+        content: '';
+        position: absolute;
+        inset: -20px;
+        border-radius: 28px;
+        pointer-events: none;
+        background:
+            radial-gradient(220px 170px at var(--spot-x) var(--spot-y), rgba(0,212,255, calc(var(--spot-a) + var(--spot-boost))), transparent 70%),
+            radial-gradient(280px 200px at 85% 105%, rgba(0,153,204,0.26), transparent 72%),
+            radial-gradient(180px 130px at 15% 5%, rgba(0,212,255,0.18), transparent 78%);
+        filter: blur(22px);
+        opacity: 0.95;
+        transition: opacity .25s ease, filter .25s ease;
+        z-index: -1;
+}
+
+.auth-container.glow-strong { --spot-boost: 0.10; }
+.auth-container.glow-strong::before {
+    opacity: 1;
+    filter: blur(24px) saturate(1.25);
+}
+
+/* subtle glowing ring behind the panel */
+.auth-container::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 30px;
+    pointer-events: none;
+    z-index: -1;
+    box-shadow: 0 0 40px rgba(0,212,255,0.25), inset 0 0 40px rgba(0,153,204,0.18);
+    opacity: .55;
+    transition: opacity .3s ease;
+}
+.auth-container.glow-strong::after { opacity: .9; }
+
+@keyframes ambientPulse {
+    0%,100% { opacity: .95; filter: blur(22px); }
+    50% { opacity: 1; filter: blur(26px); }
 }
 
 .auth-header {
@@ -539,12 +609,11 @@ body {
 }
 
 .form-group label {
+    position: relative;
     display: block;
-    margin-bottom: var(--spacing-xs);
-    color: var(--text-secondary);
     font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-xs);
 }
-
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -556,8 +625,47 @@ body {
     color: var(--text-primary);
     font-size: var(--font-size-base);
     transition: var(--transition);
+    color-scheme: dark;
 }
 
+/* Placeholder and autofill theming for dark mode */
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+/* Chrome/Edge/Safari autofill override */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+    -webkit-text-fill-color: var(--text-primary) !important;
+    box-shadow: 0 0 0px 1000px var(--bg-primary) inset !important;
+    border: 1px solid var(--border) !important;
+    transition: background-color 9999s ease-in-out 0s;
+}
+
+.auth-loading-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    z-index: 5;
+}
+.auth-loading-overlay.active { display: flex; }
+.auth-spinner {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid rgba(0,212,255,0.25);
+    border-top-color: #00d4ff;
+    animation: spin 0.9s linear infinite;
+    box-shadow: 0 0 24px rgba(0,212,255,0.35);
+}
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -611,6 +719,16 @@ body {
 
 .checkbox-label input:checked + .checkmark::after {
     content: "✓";
+    box-shadow: var(--shadow), 0 0 36px rgba(0,212,255,0.12), 0 0 72px rgba(0,153,204,0.10);
+    position: relative;
+    /* cursor spotlight defaults */
+    --spot-x: 50%;
+    --spot-y: 50%;
+    --spot-a: 0.24; /* hotspot alpha */
+    --spot-boost: 0; /* increased on Sign Up */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     color: white;
     font-size: 12px;
     font-weight: bold;
@@ -718,6 +836,8 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 24px;
+    position: relative;
+    overflow: hidden;
 }
 
 .card-icon.spending { background: linear-gradient(135deg, #667eea, #764ba2); }
@@ -792,6 +912,8 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 20px;
+    position: relative;
+    overflow: hidden;
 }
 
 .action-icon.upload { background: var(--accent-gradient); }
@@ -807,6 +929,14 @@ body {
 .action-card p {
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
+}
+
+/* PNGs inside dashboard squares */
+.icon-img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));
 }
 
 /* Recent Transactions */
@@ -1392,6 +1522,57 @@ body {
     display: flex;
     gap: var(--spacing-md);
     justify-content: center;
+}
+
+/* Cursor tracing light: non-interactive, GPU-friendly */
+:root {
+  --cursor-x: -9999px;
+  --cursor-y: -9999px;
+  --cursor-light-size: 280px;
+  --cursor-light-opacity: 0.6;
+}
+
+.cursor-light {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--cursor-light-size);
+  height: var(--cursor-light-size);
+  margin-left: calc(var(--cursor-light-size) / -2);
+  margin-top: calc(var(--cursor-light-size) / -2);
+  border-radius: 50%;
+  pointer-events: none; /* critical: do not block inputs/clicks */
+  z-index: 1; /* stays above background, but cannot block interactions */
+  background: radial-gradient(
+    circle,
+    rgba(0, 212, 255, 0.25) 0%,
+    rgba(0, 212, 255, 0.12) 40%,
+    rgba(0, 212, 255, 0.0) 70%
+  );
+  filter: blur(16px);
+  mix-blend-mode: screen;
+  opacity: var(--cursor-light-opacity);
+  transform: translate3d(var(--cursor-x), var(--cursor-y), 0);
+  will-change: transform, opacity;
+  transition: opacity 120ms ease-out;
+}
+
+/* Reduce motion: hide effect for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .cursor-light {
+    display: none !important;
+  }
+}
+
+/* Optional: Slightly dim the light on pages that set data-page="auth" */
+[data-page="auth"] .cursor-light {
+  opacity: 0.35;
+}
+
+/* Auth form stacking context: ensure inputs render above backgrounds if needed */
+.auth-card, .auth-form, .auth-container {
+  position: relative;
+  z-index: 2;
 }
 
 /* Responsive Design */

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" data-page="auth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Ensure the page can tag itself for CSS/JS behavior -->
+    <title>Sign In - CompliCopilot</title>
+    <link rel="stylesheet" href="../public/assets/css/style.css">
+</head>
+<body data-route="auth">
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="index.html">
+                    <img src="../public/assets/img/logo.png" alt="CompliCopilot" class="logo">
+                    <span class="brand-name">CompliCopilot</span>
+                </a>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html" class="btn-secondary">← Back to Home</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Auth Section -->
+    <section class="auth">
+        <div class="container">
+            <div class="auth-container">
+                <div id="auth-loading" class="auth-loading-overlay" aria-hidden="true">
+                    <div class="auth-spinner" role="status" aria-label="Loading"></div>
+                </div>
+                <div class="auth-header">
+                    <h1 id="auth-title">Welcome Back</h1>
+                    <p id="auth-subtitle">Sign in to your CompliCopilot account</p>
+                </div>
+
+                <div class="auth-tabs">
+                    <button class="tab-btn active" data-tab="signin">Log In</button>
+                </div>
+
+                <form class="auth-form" autocomplete="on">
+                    <!-- Sign In Form -->
+                    <div class="form-content active" id="signin-form">
+                        <div class="form-group">
+                            <label for="signin-email">Email Address</label>
+                            <input type="email" id="signin-email" name="email" autocomplete="email" inputmode="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signin-password">Password</label>
+                            <input type="password" id="signin-password" name="password" required>
+                        </div>
+                        <div class="form-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="remember">
+                                <span class="checkmark"></span>
+                                Remember me
+                            </label>
+                            <a href="#" class="forgot-password">Forgot password?</a>
+                        </div>
+                        <button type="submit" class="btn-primary glow full-width">Sign In</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="signin-password">Password</label>
+                        <input type="password" id="signin-password" name="password" required>
+                    </div>
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="remember">
+                            <span class="checkmark"></span>
+                            Remember me
+                        </label>
+                        <a href="#" class="forgot-password">Forgot password?</a>
+                    </div>
+                    <button type="submit" class="btn-primary glow full-width">Log In</button>
+                </form>
+
+                <div class="auth-divider">
+                    <span>or continue with</span>
+                </div>
+
+                <div class="social-auth">
+                    <button class="btn-social google">
+                        <span class="social-icon">G</span>
+                        Google
+                    </button>
+                    <button class="btn-social microsoft">
+                        <span class="social-icon">M</span>
+                        Microsoft
+                    </button>
+                </div>
+
+                <!-- Dev-only admin sign-in (for development phase) -->
+                <div class="auth-divider" style="margin-top: 24px;">
+                    <span>developer shortcut</span>
+                </div>
+                <div class="dev-auth">
+                    <button id="dev-admin-btn" type="button" class="btn-secondary full-width">Sign in as Dev Admin</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="../public/assets/js/main.js"></script>
+</body>
+</html>

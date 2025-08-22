@@ -98,8 +98,57 @@ function initAuthPage() {
     const formContents = document.querySelectorAll('.form-content');
     const authTitle = document.getElementById('auth-title');
     const authSubtitle = document.getElementById('auth-subtitle');
-    const signinForm = document.getElementById('signin-form');
-    const signupForm = document.getElementById('signup-form');
+    // Support both id="auth-form" and class="auth-form"
+    const authForm = document.querySelector('.auth-form') || document.getElementById('auth-form');
+    const authContainer = document.querySelector('.auth-container');
+    const authOverlay = document.getElementById('auth-loading');
+
+    // Cursor-tracked ambient light: smoothly follow pointer inside container
+    if (authContainer) {
+        let targetX = 0.5, targetY = 0.5; // 0..1
+        let currentX = targetX, currentY = targetY;
+        const ease = 0.15;
+        let hasFocus = false;
+
+        const updateVars = () => {
+            currentX += (targetX - currentX) * ease;
+            currentY += (targetY - currentY) * ease;
+            const xPerc = (currentX * 100).toFixed(2) + '%';
+            const yPerc = (currentY * 100).toFixed(2) + '%';
+            authContainer.style.setProperty('--spot-x', xPerc);
+            authContainer.style.setProperty('--spot-y', yPerc);
+            requestAnimationFrame(updateVars);
+        };
+        requestAnimationFrame(updateVars);
+
+        const setTarget = (e) => {
+            const rect = authContainer.getBoundingClientRect();
+            const x = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+            const y = Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1);
+            targetX = x; targetY = y;
+            // lift intensity slightly when moving (unless an input is focused)
+            if (!hasFocus) {
+                authContainer.style.setProperty('--spot-a', '0.30');
+                clearTimeout(setTarget._t);
+                setTarget._t = setTimeout(() => authContainer.style.setProperty('--spot-a', '0.24'), 220);
+            }
+        };
+
+        authContainer.addEventListener('mousemove', setTarget);
+        authContainer.addEventListener('mouseleave', () => {
+            targetX = 0.5; targetY = 0.5; // center
+        });
+
+        // While typing/focused, keep the glow calmer and pause boosts
+        authContainer.addEventListener('focusin', () => {
+            hasFocus = true;
+            authContainer.style.setProperty('--spot-a', '0.20');
+        });
+        authContainer.addEventListener('focusout', () => {
+            hasFocus = false;
+            authContainer.style.setProperty('--spot-a', '0.24');
+        });
+    }
     
     // Tab switching
     tabButtons.forEach(button => {
@@ -117,118 +166,40 @@ function initAuthPage() {
                 signinForm.classList.add('active');
                 authTitle.textContent = 'Welcome Back';
                 authSubtitle.textContent = 'Sign in to your CompliCopilot account';
+                authContainer && authContainer.classList.remove('glow-strong');
             } else {
                 signupForm.classList.add('active');
                 authTitle.textContent = 'Create Account';
                 authSubtitle.textContent = 'Join thousands of small businesses';
+                authContainer && authContainer.classList.add('glow-strong');
             }
         });
     });
     
-    // Sign In Form submission
-    if (signinForm) {
-        signinForm.addEventListener('submit', function(e) {
+    // Form submission (guarded if the form is present)
+    if (authForm) {
+        authForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const email = document.getElementById('signin-email').value;
-            const password = document.getElementById('signin-password').value;
+            const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
             const submitButton = this.querySelector('button[type="submit"]');
             
-            // Basic validation
-            if (!email || !password) {
-                showNotification('Error', 'Please fill in all fields', 'error');
-                return;
-            }
-            
-            if (!validateEmail(email)) {
-                showNotification('Error', 'Please enter a valid email address', 'error');
-                return;
-            }
-            
             addLoadingState(submitButton);
+            if (authOverlay) authOverlay.classList.add('active');
             
             // Simulate API call
             setTimeout(() => {
                 removeLoadingState(submitButton);
+                if (authOverlay) authOverlay.classList.remove('active');
                 
-                // Save user data
-                saveToStorage('user', {
-                    name: email.split('@')[0],
-                    email: email,
-                    company: 'Your Company',
-                    avatar: email.charAt(0).toUpperCase()
-                });
-                
-                showNotification('Success!', 'Signed in successfully', 'success');
+                // Simulate successful authentication
+                showNotification('Success!', `Account ${activeTab === 'signin' ? 'signed in' : 'created'} successfully`, 'success');
                 
                 // Redirect to dashboard
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
-                }, 1000);
-            }, 1500);
-        });
-    }
-    
-    // Sign Up Form submission
-    if (signupForm) {
-        signupForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('signup-name').value;
-            const email = document.getElementById('signup-email').value;
-            const company = document.getElementById('signup-company').value;
-            const password = document.getElementById('signup-password').value;
-            const confirmPassword = document.getElementById('signup-confirm').value;
-            const terms = this.querySelector('input[name="terms"]').checked;
-            const submitButton = this.querySelector('button[type="submit"]');
-            
-            // Validation
-            if (!name || !email || !company || !password || !confirmPassword) {
-                showNotification('Error', 'Please fill in all fields', 'error');
-                return;
-            }
-            
-            if (!validateEmail(email)) {
-                showNotification('Error', 'Please enter a valid email address', 'error');
-                return;
-            }
-            
-            if (password !== confirmPassword) {
-                showNotification('Error', 'Passwords do not match', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showNotification('Error', 'Password must be at least 6 characters long', 'error');
-                return;
-            }
-            
-            if (!terms) {
-                showNotification('Error', 'Please accept the terms of service', 'error');
-                return;
-            }
-            
-            addLoadingState(submitButton);
-            
-            // Simulate API call
-            setTimeout(() => {
-                removeLoadingState(submitButton);
-                
-                // Save user data
-                saveToStorage('user', {
-                    name: name,
-                    email: email,
-                    company: company,
-                    avatar: name.charAt(0).toUpperCase()
-                });
-                
-                showNotification('Success!', 'Account created successfully', 'success');
-                
-                // Redirect to dashboard
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1000);
-            }, 1500);
+                }, 1500);
+            }, 2000);
         });
     }
     
@@ -258,15 +229,16 @@ function initAuthPage() {
         });
     }
     
-    // Social auth buttons (demo functionality)
-    const socialButtons = document.querySelectorAll('.btn-social');
-    socialButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            const provider = this.textContent.trim();
-            showNotification('Demo Mode', `${provider} authentication would open here`, 'info');
-        });
-    });
+        // Dev admin shortcut
+        const devBtn = document.getElementById('dev-admin-btn');
+        if (devBtn) {
+            devBtn.addEventListener('click', () => {
+                const user = { name: 'Admin', email: 'admin@complicopilot.dev', role: 'admin' };
+                localStorage.setItem('ccp_user', JSON.stringify(user));
+                showNotification('Signed in', 'Developer admin session started', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 600);
+            });
+        }
 }
 
 // Dashboard Initialization
@@ -522,14 +494,190 @@ function updateProgressStep(stepNumber) {
 // Loading state management
 function addLoadingState(button) {
     if (button.querySelector('.loading-spinner')) return;
-    
+
     const originalText = button.textContent;
     button.setAttribute('data-original-text', originalText);
     button.disabled = true;
-    
+
     const spinner = document.createElement('span');
     spinner.className = 'loading-spinner';
     spinner.innerHTML = '⟳';
     spinner.style.cssText = `
         display: inline-block;
-        animation: spin 1s
+        animation: spin 1s linear infinite;
+        margin-right: 8px;
+    `;
+
+    // Replace button content with spinner + text
+    button.textContent = '';
+    button.appendChild(spinner);
+    const loadingText = document.createElement('span');
+    loadingText.textContent = 'Processing...';
+    button.appendChild(loadingText);
+}
+
+function removeLoadingState(button) {
+    const originalText = button.getAttribute('data-original-text');
+    button.disabled = false;
+    if (originalText !== null) {
+        button.textContent = originalText;
+        button.removeAttribute('data-original-text');
+    }
+}
+
+// Simple toast notifications
+function showNotification(title, message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 9999;
+        `;
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    const bg = type === 'success' ? 'rgba(0,255,136,0.15)' : type === 'error' ? 'rgba(255,71,87,0.15)' : 'rgba(0,212,255,0.12)';
+    const border = type === 'success' ? '#00ff88' : type === 'error' ? '#ff4757' : '#00d4ff';
+    toast.style.cssText = `
+        min-width: 260px;
+        max-width: 360px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: ${bg};
+        border: 1px solid ${border};
+        color: #fff;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+        backdrop-filter: blur(6px);
+        animation: toast-in 180ms ease-out;
+    `;
+    toast.innerHTML = `
+        <div style="font-weight:600;margin-bottom:4px;">${title}</div>
+        <div style="opacity:.85;font-size:14px;">${message}</div>
+    `;
+    if (!document.getElementById('toast-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'toast-keyframes';
+        style.textContent = `@keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`;
+        document.head.appendChild(style);
+    }
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.transition = 'opacity 200ms ease, transform 200ms ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        setTimeout(() => toast.remove(), 220);
+    }, 2800);
+}
+
+// Cursor tracing light: fluid, non-blocking, rAF-driven
+(function setupCursorLight() {
+  // Avoid duplicate init
+  if (window.__ccpCursorLightInitialized) return;
+  window.__ccpCursorLightInitialized = true;
+
+  const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Disable on touch devices or when user prefers reduced motion
+  if (isTouch || prefersReduced) return;
+
+  // Create or reuse the overlay element
+  let light = document.querySelector('.cursor-light');
+  if (!light) {
+    light = document.createElement('div');
+    light.className = 'cursor-light';
+    document.body.appendChild(light);
+  }
+
+  let lastX = -9999;
+  let lastY = -9999;
+  let rafId = null;
+  let needsUpdate = false;
+  let paused = false;
+
+  function onMouseMove(e) {
+    lastX = e.clientX;
+    lastY = e.clientY;
+    if (!rafId) {
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  function tick() {
+    rafId = null;
+    if (paused) return;
+    // Use CSS variables to avoid layout thrash
+    document.documentElement.style.setProperty('--cursor-x', lastX + 'px');
+    document.documentElement.style.setProperty('--cursor-y', lastY + 'px');
+    // If mouse keeps moving, schedule next frame
+    if (needsUpdate) {
+      needsUpdate = false;
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  // Use passive listener; minimal work in handler
+  window.addEventListener('mousemove', (e) => {
+    onMouseMove(e);
+    // coalesce moves between frames
+    needsUpdate = true;
+  }, { passive: true });
+
+  // Reduce intensity while focusing inputs (esp. on auth page)
+  const root = document.documentElement;
+  function dimLight() {
+    root.style.setProperty('--cursor-light-opacity', '0.15');
+  }
+  function restoreLight() {
+    root.style.setProperty('--cursor-light-opacity', '0.6');
+  }
+  // Pause position updates while typing in inputs/textareas/selects for extra safety
+  function focusIn(e) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/i.test(e.target.tagName)) {
+      paused = true;
+      dimLight();
+    }
+  }
+  function focusOut(e) {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/i.test(e.target.tagName)) {
+      paused = false;
+      restoreLight();
+      // Kick a position update after resume
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    }
+  }
+  document.addEventListener('focusin', focusIn, true);
+  document.addEventListener('focusout', focusOut, true);
+
+  // Hide effect if the page explicitly opts out (optional: add data attribute on auth page container)
+  const authLike = document.querySelector('[data-page="auth"], .auth-page, body[data-route="auth"]');
+  if (authLike && isSmallScreen()) {
+    light.style.display = 'none';
+  }
+
+  // Cleanup on SPA-like navigation (if applicable)
+  window.addEventListener('beforeunload', () => {
+    window.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('focusin', focusIn, true);
+    document.removeEventListener('focusout', focusOut, true);
+    if (rafId) cancelAnimationFrame(rafId);
+  });
+
+  function isSmallScreen() {
+    return window.innerWidth < 768 || window.innerHeight < 500;
+  }
+})();
+
+// Ensure global init calls above on DOM ready if you have an init function:
+// If you have initGlobalFeatures(), keep calling it. Otherwise DOMContentLoaded is fine.
+document.addEventListener('DOMContentLoaded', () => {
+  // setupCursorLight runs immediately via IIFE above
+  // ...existing code...
+});
