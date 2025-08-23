@@ -1,63 +1,103 @@
-CompliCopilot — PWA Prototype
-================================
+# 🚀 CompliCopilot — Intelligent Expense Management
 
-CompliCopilot is a Progressive Web App (PWA) that helps small businesses capture receipts and automatically extract, validate, and categorize expense data using OCR and AI.
+Welcome to **CompliCopilot**, a Progressive Web App (PWA) designed to revolutionize how small businesses manage their expenses. By leveraging **OCR** and **AI**, CompliCopilot automates receipt capture, validation, and categorization, replacing the need for junior-level accountants. 
 
-This repo contains a static frontend prototype (HTML/CSS/JS), backend scaffolding, and Docker configuration to evolve into a full prototype.
+---
 
-Monorepo layout
-- frontend/: static PWA pages, assets, and a simple dev server
-- backend/: API scaffold (to be implemented with FastAPI)
-- cloud/: stubs for OCR/AI modules
-- docker/: Dockerfiles and docker-compose.yml for local stack
-- docs/: design and architecture docs
+## 🌟 Project Overview
 
-Quick start (frontend only)
-1) Install Node.js 18+
-2) From `frontend/`, serve static files (use any static server). Example with http-server:
+### **The Idea**
+CompliCopilot simplifies expense management for small businesses by automating the tedious process of receipt handling. It extracts, validates, and categorizes expense data with precision, saving time and reducing errors.
 
-	PowerShell:
-	- npm init -y
-	- npm install http-server --save-dev
-	- npx http-server -p 3000 ..\ -c-1
+### **Problem Statement**
+Small businesses often struggle with:
+- Manual receipt handling.
+- Errors in data entry.
+- Lack of compliance with tax regulations.
 
-By default, open: http://localhost:3000/frontend/pages/index.html
+### **Innovation**
+- **AI-Powered Automation**: Extracts and validates data with high accuracy.
+- **User-Friendly Interface**: Drag-and-drop uploads and real-time feedback.
+- **Cost-Effective Solution**: Eliminates the need for junior-level accountants.
 
-Frontend pages
-- index.html (landing)
-- auth.html (sign in/up)
-- dashboard.html (mock dashboard)
-- upload.html (drag-and-drop upload + simulated processing + review)
+### **Market Potential**
+The global market for expense management software is projected to reach **$10 billion** by 2030. CompliCopilot aims to capture a significant share by targeting small and medium-sized businesses.
 
-Implemented so far
-- Ambient glow on auth with cursor-tracing spotlight; loading overlay spinner.
-- Dev-only “Sign in as Dev Admin” shortcut (localStorage stub) on auth page.
-- Home and dashboard icons added; button alignment and header polish.
-- Upload flow with drag-and-drop and simulated processing + review.
+---
 
-Docker (optional)
-The compose targets a FastAPI backend and Postgres. Frontend can be served statically without Docker.
+## 🏗️ Project Architecture
 
-From repo root:
-- docker-compose -f docker/docker-compose.yml up --build
+### **Monorepo Layout**
+- **frontend/**: Static PWA pages, assets, and a simple dev server.
+- **backend/**: API scaffold built with FastAPI.
+- **cloud/**: Stubs for OCR/AI modules.
+- **docker/**: Dockerfiles and docker-compose.yml for local stack.
+- **docs/**: Design and architecture documentation.
 
-Next steps (Phase 1+)
-- Service worker + manifest (PWA install/offline)
-- FastAPI endpoints for receipts, insights, compliance
-- Background OCR/AI integration and queue
-- Dashboard filters, details drawer, charts; bulk actions
+### **Tech Stack**
+- **Frontend**: HTML, CSS, JavaScript.
+- **Backend**: FastAPI, SQLAlchemy, PostgreSQL.
+- **AI/OCR**: Cloud-based AI pipelines for data extraction.
+- **Deployment**: Vercel (frontend), Docker (local development).
 
-Troubleshooting
-- If assets 404, ensure you open pages under `/frontend/pages/...` when using a static server.
-- If using Docker for the frontend, confirm the Docker build context and COPY paths match the `frontend/` layout.
+---
 
-Dev admin sign-in
-- On auth page, click “Sign in as Dev Admin” to jump to the dashboard (stores a mock user in localStorage).
+## 🛠️ How We Are Building It
+1. **Frontend**: A responsive PWA with drag-and-drop upload functionality.
+2. **Backend**: FastAPI endpoints for receipts, insights, and compliance checks.
+3. **AI Integration**: OCR for text extraction and AI for categorization.
+4. **Dockerized Development**: Simplified local setup with Docker Compose.
 
-Git workflow (suggested)
-- Create a feature branch: `git checkout -b feat/ui-auth-glow`
-- Commit and push: `git add . && git commit -m "feat: ui updates" && git push -u origin feat/ui-auth-glow`
-- Open a PR to main.
+---
 
-License
-MIT (pending)
+## 👥 Team Strikers
+
+We are **Team Strikers**, a group of passionate developers building innovative solutions. Meet our team:
+
+- **Member 1**: _[Add Name]_  
+  Role: _[Add Role]_  
+  Expertise: _[Add Expertise]_
+
+- **Member 2**: _[Add Name]_  
+  Role: _[Add Role]_  
+  Expertise: _[Add Expertise]_
+
+- **Member 3**: _[Add Name]_  
+  Role: _[Add Role]_  
+  Expertise: _[Add Expertise]_
+
+- **Member 4**: _[Add Name]_  
+  Role: _[Add Role]_  
+  Expertise: _[Add Expertise]_
+
+---
+
+## 🚀 Quick Start
+
+### **Frontend Only**
+1. Install Node.js 18+.
+2. From `frontend/`, serve static files using any static server. Example:
+   ```bash
+   npx http-server -p 3000 ..\ -c-1
+   ```
+3. Open: [http://localhost:3000/frontend/pages/index.html](http://localhost:3000/frontend/pages/index.html).
+
+### **Dockerized Setup**
+1. From the repo root, run:
+   ```bash
+   docker-compose -f docker/docker-compose.yml up --build
+   ```
+2. Access the frontend at `http://localhost:3000` and backend at `http://localhost:8000`.
+
+---
+
+## 📈 Next Steps
+- Add service worker and manifest for PWA install/offline support.
+- Implement FastAPI endpoints for receipts, insights, and compliance.
+- Integrate background OCR/AI processing.
+- Enhance dashboard with filters, charts, and bulk actions.
+
+---
+
+## 📜 License
+MIT (pending).
