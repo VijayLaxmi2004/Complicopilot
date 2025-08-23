@@ -54,21 +54,21 @@ The global market for expense management software is projected to reach **$10 bi
 
 We are **Team Strikers**, a group of passionate developers building innovative solutions. Meet our team:
 
-- **Member 1**: _[Add Name]_  
-  Role: _[Add Role]_  
-  Expertise: _[Add Expertise]_
+- **Member 1**: Vijay Laxmi 
+  Role: Team Lead | Project Manager  
+  Expertise: Frontend Development
 
-- **Member 2**: _[Add Name]_  
-  Role: _[Add Role]_  
-  Expertise: _[Add Expertise]_
+- **Member 2**: Abhijeet Jha  
+  Role:  AI & Machine Learning Lead
+  Expertise: Machine Learning | LLM Training | Backend Development
 
-- **Member 3**: _[Add Name]_  
-  Role: _[Add Role]_  
-  Expertise: _[Add Expertise]_
+- **Member 3**: Siya Pankaj  
+  Role: Backend Lead  
+  Expertise: Backend Development | Data Analytics | Open Source Contributor 
 
-- **Member 4**: _[Add Name]_  
-  Role: _[Add Role]_  
-  Expertise: _[Add Expertise]_
+- **Member 4**: Ritika Sharma  
+  Role: Frontend Lead 
+  Expertise: Frontend Development | React Native
 
 ---
 
