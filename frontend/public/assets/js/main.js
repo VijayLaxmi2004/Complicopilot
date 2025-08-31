@@ -211,21 +211,49 @@ function initAuthPage() {
 
     // Form submission
     if (authForm) {
-        authForm.addEventListener('submit', function(e) {
+        authForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const submitButton = this.querySelector('button[type="submit"]');
             addLoadingState(submitButton);
             if (authOverlay) authOverlay.classList.add('active');
 
-            setTimeout(() => {
+            // Determine if signup or signin
+            const isSignup = this.id === 'signup-form';
+            const url = isSignup
+                ? 'http://127.0.0.1:8000/auth/signup'
+                : 'http://127.0.0.1:8000/auth/signin';
+            const formData = new FormData(this);
+            const payload = {};
+            formData.forEach((v, k) => payload[k] = v);
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
                 removeLoadingState(submitButton);
                 if (authOverlay) authOverlay.classList.remove('active');
-                showNotification('Success!', 'Signed in successfully', 'success');
-                // optional stub user
-                const user = { name: 'Admin', email: 'admin@complicopilot.dev', role: 'admin' };
-                localStorage.setItem('ccp_user', JSON.stringify(user));
-                setTimeout(() => window.location.href = 'dashboard.html', 800);
-            }, 1200);
+                if (!res.ok) {
+                    showNotification('Error', data.detail || 'Authentication failed', 'error');
+                    return;
+                }
+                if (isSignup) {
+                    showNotification('Success!', 'Account created. Please sign in.', 'success');
+                    setTimeout(() => window.location.reload(), 800);
+                } else {
+                    showNotification('Success!', 'Signed in successfully', 'success');
+                    localStorage.setItem('ccp_token', data.access_token);
+                    setTimeout(() => window.location.href = 'dashboard.html', 800);
+                }
+            } catch (err) {
+                removeLoadingState(submitButton);
+                if (authOverlay) authOverlay.classList.remove('active');
+                showNotification('Error', 'Network error', 'error');
+            }
         });
     }
 
