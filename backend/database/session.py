@@ -1,11 +1,8 @@
+from __future__ import annotations
 from typing import Generator, Optional
 from sqlalchemy.orm import Session
 
-from __future__ import annotations
-
 import os
-from typing import Generator, Optional
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 

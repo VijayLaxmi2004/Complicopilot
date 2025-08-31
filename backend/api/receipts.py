@@ -3,12 +3,14 @@
 # svc = OCRService()
 # text = svc.extract_text_from_image(receipt_image_path_or_bytes)
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Body, Form
+from api.auth import get_current_user
 from typing import Dict, List, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_, and_
 from database.session import get_db
 from models.entities import Receipt
 from services.ocr import ocr_service
+from services.parser import ParserService
 import uuid
 import io
 import shutil
@@ -38,17 +40,22 @@ async def create_receipt(
     amount: Optional[float] = Form(None),
     currency: Optional[str] = Form("INR"),
     category: Optional[str] = Form("uncategorized"),
-    gstin: Optional[str] = Form(""),
+    gstin: Optional[str] = Form("") ,
     tax_amount: Optional[float] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
-    Upload a receipt and persist minimal metadata.
-
-    Stores: filename, mime_type, basic fields, and file size under extracted.file.size.
+    Upload a receipt image, run OCR and parser, and persist metadata.
+    Returns structured and raw data. Requires authentication.
     """
     if not file or not file.filename:
         raise HTTPException(status_code=400, detail=error_response("MISSING_FILE", "No file uploaded"))
+
+    # Check file type (accept only images)
+    allowed_types = {"image/png", "image/jpeg", "image/jpg"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=415, detail=error_response("UNSUPPORTED_TYPE", f"File type {file.content_type} not allowed"))
 
     # Determine file size without consuming stream
     try:
@@ -58,7 +65,6 @@ async def create_receipt(
     except Exception:
         size = 0
 
-    # Defaults for required DB fields
     safe_amount = float(amount) if amount is not None else 0.0
     safe_vendor = vendor or "Unknown Vendor"
     safe_date = date or "1970-01-01"
@@ -69,12 +75,24 @@ async def create_receipt(
         shutil.copyfileobj(file.file, buffer)
 
     # Perform OCR on the uploaded file
-    extracted_text = ocr_service.extract_text_from_image(str(file_path))
+    try:
+        extracted_text = ocr_service.extract_text_from_image(str(file_path))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=error_response("OCR_FAILED", f"OCR failed: {str(e)}"))
+
+    # Parse structured data from OCR text
+    parser = ParserService()
+    try:
+        parsed = parser.parse(extracted_text)
+    except Exception as e:
+        parsed = {}
+        # Optionally log error
+        raise HTTPException(status_code=500, detail=error_response("PARSER_FAILED", f"Parser failed: {str(e)}"))
 
     obj = Receipt(
-        vendor=safe_vendor,
-        date=safe_date,
-        amount=safe_amount,
+        vendor=parsed.get("vendor") or safe_vendor,
+        date=parsed.get("date") or safe_date,
+        amount=float(parsed.get("total") or safe_amount),
         currency=currency or "INR",
         category=category or "uncategorized",
         gstin=gstin or "",
@@ -85,6 +103,7 @@ async def create_receipt(
         extracted={
             "file": {"size": size},
             "ocr_text": extracted_text,
+            "parsed": parsed,
         },
     )
 
@@ -116,7 +135,8 @@ async def list_receipts(
     status: Optional[str] = None,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ) -> Dict[str, Any]:
     """List receipts with optional filtering and pagination."""
     conditions = []
@@ -166,7 +186,8 @@ async def list_receipts(
 @router.get("/{id}")
 async def get_receipt(
     id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Get details for a specific receipt by ID."""
     obj = db.get(Receipt, id)
@@ -193,7 +214,8 @@ async def get_receipt(
 async def update_receipt(
     id: str,
     payload: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Update a receipt with user-verified information."""
     obj = db.get(Receipt, id)
@@ -227,7 +249,7 @@ async def update_receipt(
     }
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_receipt(id: str, db: Session = Depends(get_db)) -> None:
+async def delete_receipt(id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)) -> None:
     """Delete a receipt by ID."""
     obj = db.get(Receipt, id)
     if not obj:
