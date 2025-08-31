@@ -12,6 +12,9 @@ import re
 from datetime import datetime
 
 
+GSTIN_REGEX = r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+
+
 def evaluate(extracted_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Evaluate receipt data for compliance issues.

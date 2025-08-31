@@ -4,60 +4,55 @@ from datetime import datetime
 import uuid
 
 
+class ComplianceIssue(BaseModel):
+    """Model for compliance issues found in receipts."""
+    level: str = Field(examples=["warning", "error"])
+    code: str
+    message: str
+    data: Dict = {}
+    resolved: bool = False
+
+
 class ReceiptBase(BaseModel):
     """Base model with common receipt fields."""
-    vendor: str
-    date: str  # Use ISO format YYYY-MM-DD
-    amount: float
-    currency: str = "INR"
-    category: str
-    gstin: str = ""
+    vendor: Optional[str] = None
+    date: Optional[str] = Field(None, description="YYYY-MM-DD")
+    amount: Optional[float] = None
+    currency: Optional[str] = "INR"
+    category: Optional[str] = None
+    gstin: Optional[str] = None
     tax_amount: Optional[float] = None
-    status: str = "needs_review"  # pending, processing, approved, needs_review, failed
+    status: Optional[str] = Field(default="needs_review")
 
 
 class ReceiptCreate(ReceiptBase):
     """Model for creating a receipt (from API)."""
-    pass
+    filename: Optional[str] = None
+    mime_type: Optional[str] = None
 
 
-class ReceiptUpdate(BaseModel):
+class ReceiptUpdate(ReceiptBase):
     """Model for updating a receipt (PATCH)."""
-    vendor: Optional[str] = None
-    date: Optional[str] = None  # Use ISO format YYYY-MM-DD
-    amount: Optional[float] = None
-    currency: Optional[str] = None
-    category: Optional[str] = None
-    gstin: Optional[str] = None
-    tax_amount: Optional[float] = None
-    status: Optional[str] = None
-
-
-class ComplianceIssue(BaseModel):
-    """Model for compliance issues found in receipts."""
-    level: str  # warning, error
-    code: str
-    message: str
-    data: Optional[Dict] = None
-    resolved: bool = False
+    pass
 
 
 class ReceiptOut(ReceiptBase):
     """Model for returning a receipt (including generated fields)."""
     id: str
-    filename: str
-    mime_type: str
+    filename: Optional[str] = None
+    mime_type: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    extracted: Dict = {}
     issues: List[ComplianceIssue] = []
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         orm_mode = True
 
 
-class PaginatedResponse(BaseModel):
+class PaginatedReceipts(BaseModel):
     """Generic paginated response model."""
-    items: List
+    items: List[ReceiptOut]
     total: int
     page: int
     size: int

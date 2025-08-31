@@ -1,25 +1,43 @@
-from typing import Generator
+from typing import Generator, Optional
 from sqlalchemy.orm import Session
+
+from __future__ import annotations
+
+import os
+from typing import Generator, Optional
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+
+# Database URL (env with sane default for local/dev)
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+psycopg2://user:password@localhost:5432/complicopilot",
+)
+
+# Engine config
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    future=True,
+)
+
+# Session factory
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True, expire_on_commit=False)
+
 
 def get_db() -> Generator[Session, None, None]:
     """
-    Database session dependency to be injected into route functions.
-    This is a placeholder for Phase 1.1 and will be properly implemented in 1.2
-    with actual SQLAlchemy Session and engine configuration.
-    
+    Yield a SQLAlchemy Session for request-scoped DB access.
+
     Usage:
-        @router.get("/")
-        def my_route(db: Session = Depends(get_db)):
-            # Use db here
-    
-    Returns:
-        Generator yielding None for now (Phase 1.1), will yield Session in Phase 1.2
+        def route(db: Session = Depends(get_db)):
+            ...
     """
-    # TODO: In Phase 1.2, initialize SQLAlchemy engine and create session
-    # For Phase 1.1, simply yield None as a placeholder
+    db: Optional[Session] = None
     try:
-        # This will become: db = SessionLocal(); yield db
-        yield None
+        db = SessionLocal()
+        yield db
     finally:
-        # This will become: db.close()
-        pass
+        if db is not None:
+            db.close()
