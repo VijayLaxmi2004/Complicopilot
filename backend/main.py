@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from api.health import router as health_router
 from api.receipts import router as receipts_router
 
+from api.auth import router as auth_router
+
 load_dotenv()
 
 APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
@@ -20,7 +22,11 @@ app = FastAPI(title="CompliCopilot API", version=APP_VERSION)
 # CORS for local dev (tighten later)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001"
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["*"],
@@ -41,3 +47,4 @@ def root() -> Dict[str, Any]:
 # Include API routers (already prefixed internally)
 app.include_router(health_router)
 app.include_router(receipts_router)
+app.include_router(auth_router)

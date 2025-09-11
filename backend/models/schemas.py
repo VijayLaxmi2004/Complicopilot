@@ -3,6 +3,30 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import uuid
 
+from pydantic import EmailStr
+
+
+class UserBase(BaseModel):
+    email: EmailStr
+    full_name: str | None = None
+
+
+class UserCreate(UserBase):
+    password: str
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserOut(UserBase):
+    id: int
+    is_active: bool
+
+    class Config:
+        orm_mode = True
+
 
 class ComplianceIssue(BaseModel):
     """Model for compliance issues found in receipts."""
