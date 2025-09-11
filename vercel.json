@@ -19,5 +19,8 @@
       "src": "/(.*)",
       "dest": "/pages/$1"
     }
+  ],
+  "rewrites": [
+    { "source": "/__/auth/handler", "destination": "/index.html" }
   ]
 }
