@@ -2,24 +2,6 @@
   "version": 2,
   "public": true,
   "outputDirectory": "frontend",
-  "routes": [
-    { 
-      "src": "/assets/(.*)",
-      "dest": "/public/assets/$1" 
-    },
-    { 
-      "src": "/(.*)\\.html", 
-      "dest": "/pages/$1.html" 
-    },
-    { 
-      "src": "/", 
-      "dest": "/pages/index.html" 
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/pages/$1"
-    }
-  ],
   "rewrites": [
     { "source": "/__/auth/handler", "destination": "/index.html" }
   ]
