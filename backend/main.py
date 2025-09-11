@@ -9,6 +9,8 @@ from api.health import router as health_router
 from api.receipts import router as receipts_router
 
 from api.auth import router as auth_router
+from models.entities import Base
+from database.session import engine
 
 load_dotenv()
 
@@ -25,10 +27,17 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
-        "http://127.0.0.1:3001"
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:5500",
+        "http://127.0.0.1:5501",
+        "http://localhost:5500",
+        "http://localhost:5501",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000"
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -39,6 +48,15 @@ app.state.settings = {
     "LOG_LEVEL": LOG_LEVEL,
     "VERSION": APP_VERSION,
 }
+
+# Ensure DB tables exist in local/dev (safe if already migrated)
+@app.on_event("startup")
+def _create_tables_if_missing() -> None:
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        # In production prefer Alembic migrations; swallow errors here to avoid masking real startup issues
+        pass
 
 @app.get("/", tags=["root"])
 def root() -> Dict[str, Any]:

@@ -54,14 +54,7 @@ function initGlobalFeatures() {
         });
     });
     
-    // Add loading states to buttons
-    document.querySelectorAll('button[type="submit"]').forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (this.form && this.form.checkValidity()) {
-                addLoadingState(this);
-            }
-        });
-    });
+    // Removed global auto-loading state on submit buttons; handled within page-specific submit handlers
 }
 
 // Make the navbar brand (logo + name) a link to the home page across pages
@@ -259,7 +252,9 @@ function initAuthPage() {
             e.preventDefault();
             console.log('Form submitted!'); // Debug log
             const submitButton = this.querySelector('button[type="submit"]');
-            
+            // In case a global click handler added a loading state pre-emptively, clear it now
+            removeLoadingState(submitButton);
+
             // Determine which form is active
             const isSignup = document.getElementById('signup-form').classList.contains('active');
             console.log('Is signup form:', isSignup); // Debug log
@@ -355,7 +350,8 @@ function initAuthPage() {
                 removeLoadingState(submitButton);
                 if (authOverlay) authOverlay.classList.remove('active');
                 if (!res.ok) {
-                    showNotification('Error', data.detail || 'Authentication failed', 'error');
+                    const msg = typeof data?.detail === 'string' ? data.detail : (data?.detail?.message || 'Authentication failed');
+                    showNotification('Error', msg, 'error');
                     return;
                 }
                 if (isSignup) {

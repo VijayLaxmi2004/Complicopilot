@@ -22,6 +22,9 @@ services:
     volumes:
       - ../backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://user:password@db:5432/complicopilot
+      - PYTHONPATH=/app
 
   db:
     image: postgres:15

@@ -1,7 +1,22 @@
-from fastapi import Request, Response
+from fastapi import Request, Response, APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordBearer
 import requests
 from .google_oauth_settings import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, FRONTEND_REDIRECT_URI
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+from jose import jwt, JWTError
+from datetime import datetime, timedelta
+from models import schemas, entities
+from database.session import get_db
+
+SECRET_KEY = "your-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
 # Google OAuth2 login endpoint
 @router.get("/google/login")
 def google_login():
@@ -62,20 +77,6 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     # Redirect to frontend with token as URL param
     redirect_url = f"{FRONTEND_REDIRECT_URI}?token={jwt_token}"
     return RedirectResponse(redirect_url)
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from jose import jwt, JWTError
-from datetime import datetime, timedelta
-from models import schemas, entities
-from database.session import get_db
-
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-router = APIRouter(prefix="/auth", tags=["auth"])
 
 # Utility functions
 
@@ -113,8 +114,8 @@ def signin(user: schemas.UserLogin, db: Session = Depends(get_db)):
     access_token = create_access_token({"sub": db_user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 # Dependency for JWT auth
-from fastapi.security import OAuth2PasswordBearer
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/signin")
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
