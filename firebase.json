@@ -7,6 +7,9 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "authDomain": "complicopilot-864.firebaseapp.com"
+    "authDomain": "complicopilot.vercel.app",
+    "rewrites": [
+      { "source": "/__/auth/handler", "destination": "/index.html" }
+    ]
   }
 }

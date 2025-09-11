@@ -1,4 +1,4 @@
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "../node_modules/firebase/auth";
 import { app } from "./firebase.js";
 
 window.addEventListener("DOMContentLoaded", () => {
