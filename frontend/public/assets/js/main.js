@@ -2,6 +2,16 @@
 
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle Google OAuth2 redirect with token in URL
+    if (window.location.pathname.endsWith('auth.html')) {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (token) {
+            localStorage.setItem('ccp_token', token);
+            window.location.href = 'dashboard.html';
+            return;
+        }
+    }
     // Initialize based on current page
     const currentPage = window.location.pathname.split('/').pop();
     
@@ -189,42 +199,149 @@ function initAuthPage() {
     // Tab switching (safe if only signin exists)
     const signinFormEl = document.getElementById('signin-form');
     const signupFormEl = document.getElementById('signup-form');
+    function setActiveForm(target) {
+        const isSignin = target === 'signin';
+        if (signinFormEl) {
+            signinFormEl.classList.toggle('active', isSignin);
+            signinFormEl.querySelectorAll('input').forEach(inp => {
+                if (isSignin) {
+                    inp.removeAttribute('disabled');
+                } else {
+                    inp.setAttribute('disabled', 'disabled');
+                }
+            });
+        }
+        if (signupFormEl) {
+            signupFormEl.classList.toggle('active', !isSignin);
+            signupFormEl.querySelectorAll('input').forEach(inp => {
+                if (!isSignin) {
+                    inp.removeAttribute('disabled');
+                } else {
+                    inp.setAttribute('disabled', 'disabled');
+                }
+            });
+        }
+        if (isSignin) {
+            authTitle && (authTitle.textContent = 'Welcome Back');
+            authSubtitle && (authSubtitle.textContent = 'Sign in to your CompliCopilot account');
+            authContainer && authContainer.classList.remove('glow-strong');
+        } else {
+            authTitle && (authTitle.textContent = 'Create Account');
+            authSubtitle && (authSubtitle.textContent = 'Join thousands of small businesses');
+            authContainer && authContainer.classList.add('glow-strong');
+        }
+    }
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const targetTab = button.getAttribute('data-tab');
             tabButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
-            formContents.forEach(c => c.classList.remove('active'));
-            if (targetTab === 'signin' && signinFormEl) {
-                signinFormEl.classList.add('active');
-                authTitle && (authTitle.textContent = 'Welcome Back');
-                authSubtitle && (authSubtitle.textContent = 'Sign in to your CompliCopilot account');
-                authContainer && authContainer.classList.remove('glow-strong');
-            } else if (targetTab === 'signup' && signupFormEl) {
-                signupFormEl.classList.add('active');
-                authTitle && (authTitle.textContent = 'Create Account');
-                authSubtitle && (authSubtitle.textContent = 'Join thousands of small businesses');
-                authContainer && authContainer.classList.add('glow-strong');
-            }
+            setActiveForm(targetTab);
         });
     });
+    // On page load, ensure only active form has required fields
+    // Initialize forms: disable the inactive (signup initially)
+    if (signinFormEl && signupFormEl) {
+        setActiveForm('signin');
+    }
 
-    // Form submission
+    // Google login button
+    const googleBtn = document.querySelector('.btn-social.google');
+    if (googleBtn) {
+        googleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = 'http://127.0.0.1:8000/auth/google/login';
+        });
+    }
+    // Form submission for Sign In and Sign Up
     if (authForm) {
         authForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            console.log('Form submitted!'); // Debug log
             const submitButton = this.querySelector('button[type="submit"]');
+            
+            // Determine which form is active
+            const isSignup = document.getElementById('signup-form').classList.contains('active');
+            console.log('Is signup form:', isSignup); // Debug log
+            
+            // Frontend validation
+            if (isSignup) {
+                console.log('Validating signup form...'); // Debug log
+                const email = document.getElementById('signup-email').value.trim();
+                const password = document.getElementById('signup-password').value;
+                const confirmPassword = document.getElementById('signup-confirm').value;
+                const fullName = document.getElementById('signup-name').value.trim();
+                const termsAccepted = document.querySelector('input[name="terms"]').checked;
+                
+                console.log('Form values:', { email, password, confirmPassword, fullName, termsAccepted }); // Debug log
+                
+                // Validate required fields
+                if (!email || !password || !confirmPassword || !fullName) {
+                    console.log('Required fields validation failed'); // Debug log
+                    showNotification('Validation Error', 'Please fill in all required fields', 'error');
+                    return;
+                }
+                
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    console.log('Email validation failed'); // Debug log
+                    showNotification('Validation Error', 'Please enter a valid email address', 'error');
+                    return;
+                }
+                
+                // Validate password match
+                if (password !== confirmPassword) {
+                    console.log('Password match validation failed'); // Debug log
+                    showNotification('Validation Error', 'Passwords do not match', 'error');
+                    return;
+                }
+                
+                // Validate password strength
+                if (password.length < 6) {
+                    console.log('Password strength validation failed'); // Debug log
+                    showNotification('Validation Error', 'Password must be at least 6 characters long', 'error');
+                    return;
+                }
+                
+                // Validate terms acceptance
+                if (!termsAccepted) {
+                    console.log('Terms validation failed'); // Debug log
+                    showNotification('Validation Error', 'Please accept the Terms of Service', 'error');
+                    return;
+                }
+                
+                console.log('All validations passed!'); // Debug log
+            } else {
+                // Sign in validation
+                const email = document.getElementById('signin-email').value.trim();
+                const password = document.getElementById('signin-password').value;
+                
+                if (!email || !password) {
+                    showNotification('Validation Error', 'Please enter both email and password', 'error');
+                    return;
+                }
+            }
+            
             addLoadingState(submitButton);
             if (authOverlay) authOverlay.classList.add('active');
 
-            // Determine if signup or signin
-            const isSignup = this.id === 'signup-form';
             const url = isSignup
                 ? 'http://127.0.0.1:8000/auth/signup'
                 : 'http://127.0.0.1:8000/auth/signin';
-            const formData = new FormData(this);
-            const payload = {};
-            formData.forEach((v, k) => payload[k] = v);
+            let payload = {};
+            if (isSignup) {
+                payload = {
+                    email: document.getElementById('signup-email').value.trim(),
+                    password: document.getElementById('signup-password').value,
+                    full_name: document.getElementById('signup-name').value.trim()
+                };
+            } else {
+                payload = {
+                    email: document.getElementById('signin-email').value.trim(),
+                    password: document.getElementById('signin-password').value
+                };
+            }
 
             try {
                 const res = await fetch(url, {
@@ -246,26 +363,22 @@ function initAuthPage() {
                     setTimeout(() => window.location.reload(), 800);
                 } else {
                     showNotification('Success!', 'Signed in successfully', 'success');
-                    localStorage.setItem('ccp_token', data.access_token);
+                    if (data.access_token) {
+                        localStorage.setItem('ccp_token', data.access_token);
+                    }
                     setTimeout(() => window.location.href = 'dashboard.html', 800);
                 }
             } catch (err) {
                 removeLoadingState(submitButton);
                 if (authOverlay) authOverlay.classList.remove('active');
-                showNotification('Error', 'Network error', 'error');
+                showNotification('Error', 'Network error: ' + err.message, 'error');
             }
         });
     }
-
-    // Dev admin shortcut
+    // Remove dev admin shortcut in production
     const devBtn = document.getElementById('dev-admin-btn');
     if (devBtn) {
-        devBtn.addEventListener('click', () => {
-            const user = { name: 'Admin', email: 'admin@complicopilot.dev', role: 'admin' };
-            localStorage.setItem('ccp_user', JSON.stringify(user));
-            showNotification('Signed in', 'Developer admin session started', 'success');
-            setTimeout(() => window.location.href = 'dashboard.html', 600);
-        });
+        devBtn.style.display = 'none';
     }
 }
 
@@ -645,6 +758,21 @@ function uploadAnother() {
     }
     
     goBackToUpload();
+}
+
+
+// Show/hide upload/review/processing steps
+function showStep(step) {
+    const uploadStep = document.getElementById('upload-step');
+    const processingStep = document.getElementById('processing-step');
+    const reviewStep = document.getElementById('review-step');
+    if (!uploadStep || !processingStep || !reviewStep) return;
+    uploadStep.classList.remove('active');
+    processingStep.classList.remove('active');
+    reviewStep.classList.remove('active');
+    if (step === 'upload') uploadStep.classList.add('active');
+    else if (step === 'processing') processingStep.classList.add('active');
+    else if (step === 'review') reviewStep.classList.add('active');
 }
 
 function updateProgressStep(stepNumber) {

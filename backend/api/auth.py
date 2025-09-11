@@ -1,3 +1,67 @@
+from fastapi import Request, Response
+from fastapi.responses import RedirectResponse
+import requests
+from .google_oauth_settings import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, FRONTEND_REDIRECT_URI
+# Google OAuth2 login endpoint
+@router.get("/google/login")
+def google_login():
+    # Google's OAuth2 endpoint for requesting an authorization code
+    google_auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth"
+        "?response_type=code"
+        f"&client_id={GOOGLE_CLIENT_ID}"
+        f"&redirect_uri={GOOGLE_REDIRECT_URI}"
+        "&scope=openid%20email%20profile"
+        "&access_type=offline"
+        "&prompt=select_account"
+    )
+    return RedirectResponse(google_auth_url)
+
+# Google OAuth2 callback endpoint
+@router.get("/google/callback")
+def google_callback(request: Request, db: Session = Depends(get_db)):
+    code = request.query_params.get("code")
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing code from Google")
+    # Exchange code for tokens
+    token_url = "https://oauth2.googleapis.com/token"
+    token_data = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code"
+    }
+    token_resp = requests.post(token_url, data=token_data)
+    if not token_resp.ok:
+        raise HTTPException(status_code=400, detail="Failed to get token from Google")
+    tokens = token_resp.json()
+    id_token = tokens.get("id_token")
+    access_token = tokens.get("access_token")
+    # Get user info
+    userinfo_resp = requests.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    if not userinfo_resp.ok:
+        raise HTTPException(status_code=400, detail="Failed to get user info from Google")
+    userinfo = userinfo_resp.json()
+    email = userinfo.get("email")
+    full_name = userinfo.get("name")
+    if not email:
+        raise HTTPException(status_code=400, detail="Google account missing email")
+    # Create or fetch user
+    db_user = db.query(entities.User).filter(entities.User.email == email).first()
+    if not db_user:
+        db_user = entities.User(email=email, hashed_password="google-oauth", full_name=full_name)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+    # Create JWT
+    jwt_token = create_access_token({"sub": db_user.email})
+    # Redirect to frontend with token as URL param
+    redirect_url = f"{FRONTEND_REDIRECT_URI}?token={jwt_token}"
+    return RedirectResponse(redirect_url)
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
