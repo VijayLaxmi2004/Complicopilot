@@ -471,86 +471,100 @@ function initUploadPage() {
     if (reviewForm) {
         reviewForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const submitButton = this.querySelector('button[type="submit"]');
             addLoadingState(submitButton);
-            
-            // Simulate saving then redirect to dashboard with updated data
-            setTimeout(() => {
+            // Collect review data
+            const reviewedData = {
+                vendor: (document.getElementById('vendor-name')?.value || '').trim() || 'Unknown Vendor',
+                date: document.getElementById('receipt-date')?.value || new Date().toISOString().slice(0,10),
+                amount: parseFloat(document.getElementById('total-amount')?.value || '0') || 0,
+                category: document.getElementById('expense-category')?.value || 'uncategorized',
+                gstin: document.getElementById('gst-number')?.value || '',
+                tax_amount: document.getElementById('tax-amount')?.value || ''
+            };
+            const receiptId = window._ccp_uploaded_receipt?.id || window._ccp_uploaded_receipt?._id;
+            if (!receiptId) {
+                showNotification('Error', 'No receipt ID found for update', 'error');
                 removeLoadingState(submitButton);
-                // Collect review data
-                const newReceipt = {
-                    id: String(Date.now()),
-                    vendor: (document.getElementById('vendor-name')?.value || '').trim() || 'Unknown Vendor',
-                    date: document.getElementById('receipt-date')?.value || new Date().toISOString().slice(0,10),
-                    amount: parseFloat(document.getElementById('total-amount')?.value || '0') || 0,
-                    category: document.getElementById('expense-category')?.value || 'uncategorized',
-                    status: 'approved',
-                    gstin: document.getElementById('gst-number')?.value || '',
-                    filename: 'uploaded-' + (document.getElementById('file-input')?.files?.[0]?.name || 'receipt')
-                };
-                const existing = JSON.parse(localStorage.getItem('ccp_new_receipts') || '[]');
-                existing.unshift(newReceipt);
-                localStorage.setItem('ccp_new_receipts', JSON.stringify(existing));
-                // Navigate back to dashboard
+                return;
+            }
+            fetch(`http://127.0.0.1:8000/api/v1/receipts/${receiptId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(reviewedData)
+            })
+            .then(res => res.json().then(data => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                removeLoadingState(submitButton);
+                if (!ok) {
+                    showNotification('Update Failed', data.detail?.message || 'Error updating receipt', 'error');
+                    return;
+                }
+                showNotification('Receipt Saved', 'Receipt has been reviewed and saved!', 'success');
                 window.location.href = 'dashboard.html';
-            }, 1200);
+            })
+            .catch(err => {
+                removeLoadingState(submitButton);
+                showNotification('Network Error', 'Could not update receipt', 'error');
+            });
         });
     }
     
     // File upload handler
     function handleFileUpload(file) {
-        // Validate file type
+        // Validate file type and size as before...
         const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
         if (!validTypes.includes(file.type)) {
             showNotification('Invalid File', 'Please upload a JPG, PNG, or PDF file', 'error');
             return;
         }
-        
-        // Validate file size (10MB)
         if (file.size > 10 * 1024 * 1024) {
             showNotification('File Too Large', 'Please upload a file smaller than 10MB', 'error');
             return;
         }
-        
-        // Show processing step
+
         showStep('processing');
         updateProgressStep(2);
-        
-        // Simulate file processing
-        simulateProcessing(file);
-    }
-    
-    // Simulate AI processing
-    function simulateProcessing(file) {
-        const processSteps = document.querySelectorAll('.process-item');
-        let currentStep = 0;
-        const processInterval = setInterval(() => {
-            if (currentStep < processSteps.length) {
-                const step = processSteps[currentStep];
-                step.classList.add('active');
-                const icon = step.querySelector('.process-icon');
-                if (icon) {
-                    if (currentStep === 0) icon.textContent = '✓';
-                    else icon.textContent = '⟳';
-                }
-                currentStep++;
-            } else {
-                clearInterval(processInterval);
-                processSteps.forEach((s, i) => {
-                    const icon = s.querySelector('.process-icon');
-                    if (icon) icon.textContent = '✓';
-                    s.classList.add('active');
-                });
-                // Load preview and move to review
-                loadReceiptPreview(file);
-                showStep('review');
-                updateProgressStep(3);
+
+        // --- NEW: Send to backend ---
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('http://127.0.0.1:8000/api/v1/receipts', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                // No need to set Content-Type for FormData
+                'Authorization': `Bearer ${localStorage.getItem('ccp_token') || ''}`
             }
-        }, 700);
+        })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok) {
+                showNotification('Upload Failed', data.detail?.message || 'Error uploading receipt', 'error');
+                showStep('upload');
+                updateProgressStep(1);
+                return;
+            }
+            // Save backend response for review step
+            window._ccp_uploaded_receipt = data;
+            loadReceiptPreview(file, data);
+            showStep('review');
+            updateProgressStep(3);
+            // Optionally, pre-fill review form fields with data.extracted or parsed fields
+            prefillReviewForm(data);
+        })
+        .catch(err => {
+            showNotification('Network Error', 'Could not upload receipt', 'error');
+            showStep('upload');
+            updateProgressStep(1);
+        });
     }
-    
-    function loadReceiptPreview(file) {
+
+    // Update loadReceiptPreview to accept backend data if needed
+    function loadReceiptPreview(file, backendData) {
         const previewImg = document.getElementById('receipt-preview');
         if (!previewImg) return;
         if (file && file.type && file.type.startsWith('image/')) {
@@ -560,16 +574,20 @@ function initUploadPage() {
         } else {
             previewImg.src = '../public/assets/img/logo.png';
         }
+        // Optionally update preview fields with backendData
     }
 
-    function showStep(stepName) {
-        const ids = ['upload','processing','review','success'];
-        ids.forEach(id => {
-            const el = document.getElementById(`${id}-step`);
-            if (!el) return;
-            el.classList.toggle('active', id === stepName);
-        });
+    // Prefill review form with backend data
+    function prefillReviewForm(data) {
+        if (!data) return;
+        document.getElementById('vendor-name').value = data.vendor || data.extracted?.vendor || '';
+        document.getElementById('receipt-date').value = data.date || data.extracted?.date || '';
+        document.getElementById('total-amount').value = data.amount || data.extracted?.amount || '';
+        document.getElementById('expense-category').value = data.category || data.extracted?.category || '';
+        document.getElementById('gst-number').value = data.gstin || data.extracted?.gstin || '';
+        document.getElementById('tax-amount').value = data.tax_amount || data.extracted?.tax_amount || '';
     }
+    // ...existing code...
 }
 
 // Global helper functions
