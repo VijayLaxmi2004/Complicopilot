@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "site": "complicopilot-864",
+    "public": "frontend/public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "authDomain": "complicopilot-864.firebaseapp.com"
+  }
+}
