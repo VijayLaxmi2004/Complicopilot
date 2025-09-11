@@ -7,7 +7,6 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBL8_6nVU2OCwvNRYWqbx4NzD3PgftnFUE",
-  authDomain: "complicopilot-864.firebaseapp.com",
   authDomain: "complicopilot.vercel.app",
   // If deploying to Vercel, you may also want to add:
   // authDomain: ["complicopilot-864.firebaseapp.com", "complicopilot.vercel.app"],
