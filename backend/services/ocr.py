@@ -129,26 +129,74 @@ class OCRService:
         High-level OCR with multiple preprocessing strategies and fallbacks.
         """
         bgr = _as_numpy_bgr(img)
-        pipelines = [
-            _preprocess_pipeline_binarize,
-            _preprocess_pipeline_otsu,
-            _preprocess_pipeline_clahe,
+        
+        # Try simple preprocessing first (often works better for clear receipts)
+        simple_pipelines = [
+            lambda x: cv2.cvtColor(x, cv2.COLOR_BGR2GRAY),  # Just convert to grayscale
+            _preprocess_pipeline_otsu,  # Basic Otsu thresholding
+            _preprocess_pipeline_binarize,  # More aggressive preprocessing
+            _preprocess_pipeline_clahe,  # CLAHE enhancement
         ]
+        
         best_text = ""
-        for i, pipeline in enumerate(pipelines, start=1):
+        best_confidence = 0
+        
+        for i, pipeline in enumerate(simple_pipelines, start=1):
             try:
                 processed = pipeline(bgr)
-                text = pytesseract.image_to_string(processed, lang=self.lang, config=self._tess_config())
-                normalized = self._normalize(text)
-                logger.info("Pipeline %d produced %d chars", i, len(normalized))
-                if len(normalized) > len(best_text):
-                    best_text = normalized
-                # Early exit if strong signal
-                if self._looks_good(normalized):
-                    return normalized
+                
+                # Try different PSM modes for better recognition
+                psm_modes = [6, 8, 13]  # 6=uniform block, 8=single word, 13=raw line
+                
+                for psm in psm_modes:
+                    config = f"--oem {self.oem} --psm {psm}"
+                    text = pytesseract.image_to_string(processed, lang=self.lang, config=config)
+                    normalized = self._normalize(text)
+                    
+                    # Calculate a simple confidence score
+                    confidence = self._calculate_confidence(normalized)
+                    
+                    logger.info("Pipeline %d PSM %d produced %d chars, confidence: %.2f", i, psm, len(normalized), confidence)
+                    
+                    if confidence > best_confidence or (confidence == best_confidence and len(normalized) > len(best_text)):
+                        best_text = normalized
+                        best_confidence = confidence
+                    
+                    # Early exit if we get very good results
+                    if confidence > 0.8 and len(normalized) > 20:
+                        logger.info("High confidence result found, returning early")
+                        return normalized
+                        
             except Exception as e:
                 logger.warning("OCR pipeline %d failed: %s", i, e)
+        
+        logger.info("Best OCR result: confidence=%.2f, length=%d", best_confidence, len(best_text))
         return best_text
+
+    @staticmethod
+    def _calculate_confidence(text: str) -> float:
+        """Calculate a simple confidence score based on text characteristics."""
+        if not text or len(text) < 3:
+            return 0.0
+        
+        # Count alphanumeric characters vs total
+        alphanum_count = sum(1 for c in text if c.isalnum())
+        total_count = len(text)
+        
+        # Count common receipt words
+        receipt_keywords = ['total', 'amount', 'tax', 'date', 'receipt', 'bill', 'invoice', 
+                           'subtotal', 'qty', 'price', 'cash', 'card', 'visa', 'mastercard',
+                           'restaurant', 'store', 'shop', 'market', '$', '₹', 'rs', 'inr']
+        
+        keyword_count = sum(1 for keyword in receipt_keywords if keyword.lower() in text.lower())
+        
+        # Calculate score
+        alphanum_ratio = alphanum_count / total_count if total_count > 0 else 0
+        keyword_bonus = min(keyword_count * 0.1, 0.3)  # Max 30% bonus for keywords
+        length_bonus = min(len(text) / 100, 0.2)  # Small bonus for longer text
+        
+        confidence = alphanum_ratio + keyword_bonus + length_bonus
+        return min(confidence, 1.0)
 
     def extract_lines_with_confidence(
         self, img: Union[str, Path, bytes, Image.Image, np.ndarray], min_conf: int = 60

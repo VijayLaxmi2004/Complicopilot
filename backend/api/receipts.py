@@ -77,15 +77,19 @@ async def create_receipt(
     # Perform OCR on the uploaded file
     try:
         extracted_text = ocr_service.extract_text_from_image(str(file_path))
+        print(f"DEBUG: OCR extracted text: '{extracted_text}'")
     except Exception as e:
+        print(f"DEBUG: OCR failed with error: {str(e)}")
         raise HTTPException(status_code=500, detail=error_response("OCR_FAILED", f"OCR failed: {str(e)}"))
 
     # Parse structured data from OCR text
     parser = ParserService()
     try:
         parsed = parser.parse(extracted_text)
+        print(f"DEBUG: Parser output: {parsed}")
     except Exception as e:
         parsed = {}
+        print(f"DEBUG: Parser failed with error: {str(e)}")
         # Optionally log error
         raise HTTPException(status_code=500, detail=error_response("PARSER_FAILED", f"Parser failed: {str(e)}"))
 

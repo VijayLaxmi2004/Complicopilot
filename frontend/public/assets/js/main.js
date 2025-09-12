@@ -631,7 +631,8 @@ function initUploadPage() {
             fetch(`http://localhost:8000/api/v1/receipts/${receiptId}`, {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('ccp_token')}`
                 },
                 body: JSON.stringify(reviewedData)
             })
@@ -643,7 +644,14 @@ function initUploadPage() {
                     return;
                 }
                 showNotification('Receipt Saved', 'Receipt has been reviewed and saved!', 'success');
-                window.location.href = 'dashboard.html';
+                
+                // Generate and download CSV
+                generateAndDownloadCSV(reviewedData, data);
+                
+                // Redirect to dashboard after a short delay
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
             })
             .catch(err => {
                 removeLoadingState(submitButton);
@@ -659,6 +667,10 @@ function initUploadPage() {
             alert('You are not logged in. Please log in to upload files.');
             return;
         }
+
+        // Show processing step
+        showStep('processing');
+        updateProgressStep(2);
 
         const formData = new FormData();
         formData.append('file', file);
@@ -678,10 +690,27 @@ function initUploadPage() {
 
             const result = await response.json();
             console.log('Upload successful:', result);
-            alert('File uploaded successfully!');
+            
+            // Store the receipt data for the review step
+            localStorage.setItem('current_receipt', JSON.stringify(result));
+            window._ccp_uploaded_receipt = result; // Also store globally for the form handler
+            
+            // Show preview with backend data
+            loadReceiptPreview(file, result);
+            
+            // Move to review step after a brief delay
+            setTimeout(() => {
+                showStep('review');
+                updateProgressStep(3);
+                populateReviewFields(result);
+            }, 1000);
+            
         } catch (error) {
             console.error('Error during file upload:', error);
             alert(`File upload failed: ${error.message}`);
+            // Go back to upload step on error
+            showStep('upload');
+            updateProgressStep(1);
         }
     }
 
@@ -697,6 +726,126 @@ function initUploadPage() {
             previewImg.src = '../public/assets/img/logo.png';
         }
         // Optionally update preview fields with backendData
+    }
+
+    // Populate review form fields with extracted data
+    function populateReviewFields(receiptData) {
+        console.log('Populating form fields with:', receiptData);
+        
+        // Map to correct field IDs from HTML
+        const vendorField = document.getElementById('vendor-name');
+        const dateField = document.getElementById('receipt-date');
+        const amountField = document.getElementById('total-amount');
+        const categoryField = document.getElementById('expense-category');
+        const gstinField = document.getElementById('gst-number');
+        const taxAmountField = document.getElementById('tax-amount');
+
+        // Clear and populate vendor name
+        if (vendorField) {
+            const vendor = receiptData.vendor || '';
+            // Clean up vendor name (remove special characters from OCR errors)
+            const cleanVendor = vendor.replace(/[|'"_\-~]+$/, '').trim();
+            vendorField.value = cleanVendor && cleanVendor !== 'a |' ? cleanVendor : '';
+            console.log('Set vendor:', cleanVendor);
+        }
+
+        // Populate date (convert to YYYY-MM-DD format for date input)
+        if (dateField && receiptData.date && receiptData.date !== '1970-01-01') {
+            let dateValue = receiptData.date;
+            // Convert MM/DD/YYYY to YYYY-MM-DD
+            if (dateValue.includes('/')) {
+                const parts = dateValue.split('/');
+                if (parts.length === 3) {
+                    // Handle both MM/DD/YYYY and DD/MM/YYYY
+                    if (parts[2].length === 4) {
+                        dateValue = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                    }
+                }
+            }
+            dateField.value = dateValue;
+            console.log('Set date:', dateValue);
+        }
+
+        // Populate amount
+        if (amountField && receiptData.amount && receiptData.amount > 0) {
+            amountField.value = receiptData.amount;
+            console.log('Set amount:', receiptData.amount);
+        }
+
+        // Set category
+        if (categoryField && receiptData.category) {
+            categoryField.value = receiptData.category;
+            console.log('Set category:', receiptData.category);
+        }
+
+        // Populate GSTIN
+        if (gstinField) {
+            gstinField.value = receiptData.gstin || '';
+            if (!receiptData.gstin) {
+                gstinField.placeholder = "Not found on receipt";
+                gstinField.classList.add('warning');
+            }
+        }
+
+        // Populate tax amount
+        if (taxAmountField && receiptData.tax_amount) {
+            taxAmountField.value = receiptData.tax_amount;
+            console.log('Set tax amount:', receiptData.tax_amount);
+        }
+
+        // Show extracted OCR text for debugging
+        console.log('OCR Text:', receiptData.extracted?.ocr_text);
+    }
+
+    // Generate and download CSV for the approved receipt
+    function generateAndDownloadCSV(reviewedData, savedData) {
+        console.log('Generating CSV for:', reviewedData);
+        
+        // Prepare CSV data
+        const csvData = [{
+            'Receipt ID': savedData.id || 'N/A',
+            'Date': reviewedData.date || savedData.date || '',
+            'Vendor Name': reviewedData.vendor || savedData.vendor || '',
+            'Total Amount': reviewedData.amount || savedData.amount || 0,
+            'Currency': savedData.currency || 'INR',
+            'Category': reviewedData.category || savedData.category || 'uncategorized',
+            'GST Number': reviewedData.gstin || savedData.gstin || '',
+            'Tax Amount': reviewedData.tax_amount || savedData.tax_amount || '',
+            'Status': savedData.status || 'approved',
+            'Created At': savedData.created_at || new Date().toISOString(),
+            'Filename': savedData.filename || ''
+        }];
+
+        // Convert to CSV format
+        const headers = Object.keys(csvData[0]);
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => 
+                headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    // Escape quotes and wrap in quotes if contains comma
+                    return value.includes(',') || value.includes('"') 
+                        ? `"${value.replace(/"/g, '""')}"` 
+                        : value;
+                }).join(',')
+            )
+        ].join('\n');
+
+        // Create and download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `receipt_${savedData.id || Date.now()}_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('CSV downloaded successfully');
+        showNotification('CSV Downloaded', 'Receipt data has been exported to CSV file', 'success');
     }
 
     // Prefill review form with backend data

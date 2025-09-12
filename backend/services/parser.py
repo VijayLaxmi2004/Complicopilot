@@ -11,14 +11,26 @@ class ParserService:
         Extract the total amount from the OCR text using regular expressions.
         Supports INR (₹), numbers with commas, and variations in label.
         """
+        # More comprehensive patterns for amounts
         total_patterns = [
-            r"(?i)(total|grand total|amount due|amount)\s*[:\-]?\s*[₹$]?([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?)",  # e.g. Total: ₹1,500.00
-            r"(?i)(total|grand total|amount due|amount)\s*[:\-]?\s*[₹$]?([0-9]+(?:\.\d{2})?)",  # e.g. Grand Total 1500
+            r"(?i)(total|grand total|amount due|amount|net amount|final amount)\s*[:\-]?\s*[₹$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?)",
+            r"(?i)(total|grand total|amount due|amount|net amount|final amount)\s*[:\-]?\s*[₹$]?\s*([0-9]+(?:\.\d{2})?)",
+            r"[₹$]\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?)",  # Just currency symbol followed by number
+            r"([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?)\s*[₹$]",  # Number followed by currency
+            r"([0-9]+\.\d{2})",  # Any decimal number (as fallback)
         ]
+        
         for pattern in total_patterns:
-            match = re.search(pattern, ocr_text)
-            if match:
-                return match.group(2)
+            matches = re.findall(pattern, ocr_text)
+            for match in matches:
+                amount = match[-1] if isinstance(match, tuple) else match
+                # Validate amount is reasonable (between 1 and 100000)
+                try:
+                    float_amount = float(amount.replace(',', ''))
+                    if 1 <= float_amount <= 100000:
+                        return amount
+                except ValueError:
+                    continue
         return None
 
     def extract_date(self, ocr_text: str) -> Optional[str]:
@@ -26,26 +38,61 @@ class ParserService:
         Extract the date from the OCR text using regular expressions.
         """
         date_patterns = [
-            r"\b(\d{2}[/-]\d{2}[/-]\d{4})\b",  # Matches 'DD-MM-YYYY' or 'DD/MM/YYYY'
-            r"\b(\d{2}[/-]\d{2}[/-]\d{2})\b",  # Matches 'DD-MM-YY' or 'DD/MM/YY'
-            r"\b(\d{2}\s+[A-Za-z]{3}\s+\d{4})\b",  # Matches 'DD Mon YYYY'
+            r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{4})\b",  # DD-MM-YYYY or DD/MM/YYYY
+            r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2})\b",  # DD-MM-YY or DD/MM/YY
+            r"\b(\d{2}\s+[A-Za-z]{3}\s+\d{4})\b",  # DD Mon YYYY
+            r"\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b",  # YYYY-MM-DD or YYYY/MM/DD
+            r"(?i)(date|dated)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})",  # "Date: DD/MM/YYYY"
         ]
+        
         for pattern in date_patterns:
             match = re.search(pattern, ocr_text)
             if match:
-                return match.group(1)
+                # Get the date part - handle both single group and tuple matches
+                date_str = match.group(1) if match.lastindex and match.lastindex >= 1 else match.group(0)
+                # Basic validation - check if it looks like a reasonable date
+                if len(date_str) >= 6:  # At least DDMMYY format
+                    return date_str
         return None
 
     def extract_vendor(self, ocr_text: str) -> Optional[str]:
         """
         Extract the vendor name from the OCR text.
-        Assume the vendor is the first non-empty line of text.
+        Try to find the most likely vendor name using multiple strategies.
         """
-        lines = ocr_text.splitlines()
-        for line in lines:
-            line = line.strip()
-            if line:  # Return the first non-empty line
+        lines = [line.strip() for line in ocr_text.splitlines() if line.strip()]
+        
+        if not lines:
+            return None
+        
+        # Strategy 1: Look for lines that look like business names
+        for line in lines[:5]:  # Check first 5 lines
+            # Skip lines that are clearly not vendor names
+            if any(keyword in line.lower() for keyword in ['receipt', 'bill', 'invoice', 'date', 'time', 'total', 'amount']):
+                continue
+            
+            # Skip lines with mostly numbers or symbols
+            if len(re.sub(r'[^a-zA-Z\s]', '', line)) < len(line) * 0.5:
+                continue
+            
+            # Skip very short lines (less than 3 characters)
+            if len(line) < 3:
+                continue
+            
+            # If line contains common business words, it's likely the vendor
+            business_indicators = ['restaurant', 'cafe', 'coffee', 'shop', 'store', 'market', 'mart', 'ltd', 'inc', 'pvt']
+            if any(indicator in line.lower() for indicator in business_indicators):
                 return line
+            
+            # If it's a reasonable length and mostly alphabetic, use it
+            if 3 <= len(line) <= 50 and re.search(r'[a-zA-Z]{3,}', line):
+                return line
+        
+        # Strategy 2: If no good candidate found, use the first non-empty line
+        for line in lines:
+            if len(line) >= 3 and not line.isdigit():
+                return line
+        
         return None
 
     def parse(self, ocr_text: str) -> Dict[str, Optional[str]]:
