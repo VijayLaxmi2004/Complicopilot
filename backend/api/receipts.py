@@ -3,7 +3,7 @@
 # svc = OCRService()
 # text = svc.extract_text_from_image(receipt_image_path_or_bytes)
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Body, Form
-from api.auth import get_current_user
+from api.auth import get_current_firebase_user
 from typing import Dict, List, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_, and_
@@ -43,7 +43,7 @@ async def create_receipt(
     gstin: Optional[str] = Form("") ,
     tax_amount: Optional[float] = Form(None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_firebase_user)
 ) -> Dict[str, Any]:
     """
     Upload a receipt image, run OCR and parser, and persist metadata.
@@ -136,7 +136,7 @@ async def list_receipts(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_firebase_user)
 ) -> Dict[str, Any]:
     """List receipts with optional filtering and pagination."""
     conditions = []
@@ -187,7 +187,7 @@ async def list_receipts(
 async def get_receipt(
     id: str,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_firebase_user)
 ) -> Dict[str, Any]:
     """Get details for a specific receipt by ID."""
     obj = db.get(Receipt, id)
@@ -215,7 +215,7 @@ async def update_receipt(
     id: str,
     payload: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_firebase_user)
 ) -> Dict[str, Any]:
     """Update a receipt with user-verified information."""
     obj = db.get(Receipt, id)
@@ -249,7 +249,7 @@ async def update_receipt(
     }
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_receipt(id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)) -> None:
+async def delete_receipt(id: str, db: Session = Depends(get_db), current_user=Depends(get_current_firebase_user)) -> None:
     """Delete a receipt by ID."""
     obj = db.get(Receipt, id)
     if not obj:

@@ -243,7 +243,7 @@ function initAuthPage() {
     // if (googleBtn) {
     //     googleBtn.addEventListener('click', function(e) {
     //         e.preventDefault();
-    //         window.location.href = 'http://127.0.0.1:8000/auth/google/login';
+    //         window.location.href = 'http://localhost:8000/auth/google/login';
     //     });
     // }
     
@@ -325,8 +325,8 @@ function initAuthPage() {
             if (authOverlay) authOverlay.classList.add('active');
 
             const url = isSignup
-                ? 'http://127.0.0.1:8000/auth/signup'
-                : 'http://127.0.0.1:8000/auth/signin';
+                ? 'http://localhost:8000/auth/signup'
+                : 'http://localhost:8000/auth/signin';
             let payload = {};
             if (isSignup) {
                 payload = {
@@ -628,7 +628,7 @@ function initUploadPage() {
                 removeLoadingState(submitButton);
                 return;
             }
-            fetch(`http://127.0.0.1:8000/api/v1/receipts/${receiptId}`, {
+            fetch(`http://localhost:8000/api/v1/receipts/${receiptId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -653,54 +653,36 @@ function initUploadPage() {
     }
     
     // File upload handler
-    function handleFileUpload(file) {
-        // Validate file type and size as before...
-        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Invalid File', 'Please upload a JPG, PNG, or PDF file', 'error');
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            showNotification('File Too Large', 'Please upload a file smaller than 10MB', 'error');
+    async function handleFileUpload(file) {
+        const token = localStorage.getItem('ccp_token');
+        if (!token) {
+            alert('You are not logged in. Please log in to upload files.');
             return;
         }
 
-        showStep('processing');
-        updateProgressStep(2);
-
-        // --- NEW: Send to backend ---
         const formData = new FormData();
         formData.append('file', file);
 
-        fetch('http://127.0.0.1:8000/api/v1/receipts', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                // No need to set Content-Type for FormData
-                'Authorization': `Bearer ${localStorage.getItem('ccp_token') || ''}`
+        try {
+            const response = await fetch('http://localhost:8000/api/v1/receipts/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
             }
-        })
-        .then(res => res.json().then(data => ({ ok: res.ok, data })))
-        .then(({ ok, data }) => {
-            if (!ok) {
-                showNotification('Upload Failed', data.detail?.message || 'Error uploading receipt', 'error');
-                showStep('upload');
-                updateProgressStep(1);
-                return;
-            }
-            // Save backend response for review step
-            window._ccp_uploaded_receipt = data;
-            loadReceiptPreview(file, data);
-            showStep('review');
-            updateProgressStep(3);
-            // Optionally, pre-fill review form fields with data.extracted or parsed fields
-            prefillReviewForm(data);
-        })
-        .catch(err => {
-            showNotification('Network Error', 'Could not upload receipt', 'error');
-            showStep('upload');
-            updateProgressStep(1);
-        });
+
+            const result = await response.json();
+            console.log('Upload successful:', result);
+            alert('File uploaded successfully!');
+        } catch (error) {
+            console.error('Error during file upload:', error);
+            alert(`File upload failed: ${error.message}`);
+        }
     }
 
     // Update loadReceiptPreview to accept backend data if needed

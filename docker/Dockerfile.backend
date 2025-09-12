@@ -9,7 +9,8 @@ WORKDIR /app
 # --- INSTALL TESSERACT SYSTEM DEPENDENCIES ---
 # This command updates the package list and installs the Tesseract engine
 # and its development files, which pytesseract needs to communicate with.
-RUN apt-get update && apt-get install -y \
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    apt-get update --fix-missing && apt-get install -y \
     tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 # ---------------------------------------------

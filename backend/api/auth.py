@@ -9,6 +9,7 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from models import schemas, entities
 from database.session import get_db
+from services.firebase_admin import verify_firebase_token
 
 SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
@@ -136,7 +137,27 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+def get_current_firebase_user(request: Request):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ", 1)[1]
+    decoded = verify_firebase_token(token)
+    if not decoded:
+        raise HTTPException(status_code=401, detail="Invalid Firebase token")
+    return decoded
+
 # Protected endpoint
 @router.get("/users/me", response_model=schemas.UserOut)
 def read_users_me(current_user: entities.User = Depends(get_current_user)):
     return current_user
+
+from fastapi import APIRouter, Depends, Request
+from .auth import get_current_firebase_user
+
+router = APIRouter()
+
+@router.post("/api/v1/receipts/")
+def upload_receipt(request: Request, user=Depends(get_current_firebase_user)):
+    # user is the decoded Firebase user info
+    ...

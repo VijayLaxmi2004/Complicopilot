@@ -14,3 +14,4 @@ numpy
 requests
 passlib[bcrypt]
 python-jose
+firebase-admin
