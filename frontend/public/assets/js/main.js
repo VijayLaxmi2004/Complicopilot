@@ -238,14 +238,17 @@ function initAuthPage() {
         setActiveForm('signin');
     }
 
-    // Google login button
-    const googleBtn = document.querySelector('.btn-social.google');
-    if (googleBtn) {
-        googleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            window.location.href = 'http://127.0.0.1:8000/auth/google/login';
-        });
-    }
+    // Google login button - DISABLED: Using Firebase Auth instead
+    // const googleBtn = document.querySelector('.btn-social.google');
+    // if (googleBtn) {
+    //     googleBtn.addEventListener('click', function(e) {
+    //         e.preventDefault();
+    //         window.location.href = 'http://127.0.0.1:8000/auth/google/login';
+    //     });
+    // }
+    
+    console.log("Note: Google OAuth handled by auth-google.js with Firebase Auth");
+    
     // Form submission for Sign In and Sign Up
     if (authForm) {
         authForm.addEventListener('submit', async function(e) {

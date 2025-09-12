@@ -1,0 +1,59 @@
+[debug] [2025-09-11T17:06:28.412Z] ----------------------------------------------------------------------
+[debug] [2025-09-11T17:06:28.415Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\HP\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js emulators:start
+[debug] [2025-09-11T17:06:28.416Z] CLI Version:   14.16.0
+[debug] [2025-09-11T17:06:28.416Z] Platform:      win32
+[debug] [2025-09-11T17:06:28.416Z] Node Version:  v22.13.1
+[debug] [2025-09-11T17:06:28.416Z] Time:          Thu Sep 11 2025 22:36:28 GMT+0530 (India Standard Time)
+[debug] [2025-09-11T17:06:28.416Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-09-11T17:06:28.628Z] Object "/hosting" in "firebase.json" has unknown property: {"additionalProperty":"authDomain"}
+[debug] [2025-09-11T17:06:28.628Z] Field "/hosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2025-09-11T17:06:28.629Z] Field "/hosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[debug] [2025-09-11T17:06:28.636Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-09-11T17:06:28.636Z] > authorizing via signed-in user (alokprashar864@gmail.com)
+[info] i  emulators: Starting emulators: hosting {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: hosting"}}
+[debug] [2025-09-11T17:06:28.645Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-09-11T17:06:28.645Z] [hosting] Hosting Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-09-11T17:06:28.645Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"hosting":[{"address":"127.0.0.1","family":"IPv4","port":5000}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-09-11T17:06:28.649Z] Emulator locator file path: C:\Users\HP\AppData\Local\Temp\hub-complicopilot.json
+[debug] [2025-09-11T17:06:28.650Z] [hub] writing locator at C:\Users\HP\AppData\Local\Temp\hub-complicopilot.json
+[debug] [2025-09-11T17:06:28.680Z] Checked if tokens are valid: false, expires at: 1757609054237
+[debug] [2025-09-11T17:06:28.680Z] Checked if tokens are valid: false, expires at: 1757609054237
+[debug] [2025-09-11T17:06:28.681Z] > refreshing access token with scopes: []
+[debug] [2025-09-11T17:06:28.682Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-09-11T17:06:28.682Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-09-11T17:06:29.212Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-09-11T17:06:29.212Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-09-11T17:06:29.219Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/complicopilot/sites 
+[debug] [2025-09-11T17:06:30.659Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/complicopilot/sites 200
+[debug] [2025-09-11T17:06:30.659Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/complicopilot/sites {"sites":[{"name":"projects/complicopilot/sites/complicopilot","defaultUrl":"https://complicopilot.web.app","type":"DEFAULT_SITE"},{"name":"projects/complicopilot/sites/complicopilot-864","defaultUrl":"https://complicopilot-864.web.app","appId":"1:314466368999:web:90bddd39193c34fc80d142","type":"USER_SITE"}]}
+[debug] [2025-09-11T17:06:30.659Z] Checked if tokens are valid: true, expires at: 1757613988212
+[debug] [2025-09-11T17:06:30.659Z] Checked if tokens are valid: true, expires at: 1757613988212
+[debug] [2025-09-11T17:06:30.659Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/complicopilot/webApps/-/config [none]
+[debug] [2025-09-11T17:06:31.892Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/complicopilot/webApps/-/config 200
+[debug] [2025-09-11T17:06:31.892Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/complicopilot/webApps/-/config {"projectId":"complicopilot","appId":"1:314466368999:web:90bddd39193c34fc80d142","storageBucket":"complicopilot.firebasestorage.app","apiKey":"AIzaSyBL8_6nVU2OCwvNRYWqbx4NzD3PgftnFUE","authDomain":"complicopilot.firebaseapp.com","messagingSenderId":"314466368999","measurementId":"G-8657BX50YD"}
+[debug] [2025-09-11T17:06:31.897Z] Checked if tokens are valid: true, expires at: 1757613988212
+[debug] [2025-09-11T17:06:31.897Z] Checked if tokens are valid: true, expires at: 1757613988212
+[debug] [2025-09-11T17:06:31.897Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/complicopilot [none]
+[debug] [2025-09-11T17:06:32.310Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/complicopilot 200
+[debug] [2025-09-11T17:06:32.311Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/complicopilot {"projectId":"complicopilot","projectNumber":"314466368999","displayName":"CompliCopilot","name":"projects/complicopilot","resources":{"hostingSite":"complicopilot"},"state":"ACTIVE","etag":"1_dc6575f4-7fb3-4c2a-9d29-2944e9b32f2a"}
+[info] i  hosting[complicopilot-864]: Serving hosting files from: frontend/public {"metadata":{"emulator":{"name":"hosting"},"message":"Serving hosting files from: \u001b[1mfrontend/public\u001b[22m"}}
+[info] +  hosting[complicopilot-864]: Local server: http://127.0.0.1:5000 {"metadata":{"emulator":{"name":"hosting"},"message":"Local server: \u001b[4m\u001b[1mhttp://127.0.0.1:5000\u001b[22m\u001b[24m"}}
+[warn] !  emulators: The Emulator UI is not starting because none of the running emulators have a UI component. {"metadata":{"emulator":{"name":"hub"},"message":"The Emulator UI is not starting because none of the running emulators have a UI component."}}
+[debug] [2025-09-11T17:06:32.336Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+└─────────────────────────────────────────────────────────────┘
+
+┌──────────┬────────────────┐
+│ Emulator │ Host:Port      │
+├──────────┼────────────────┤
+│ Hosting  │ 127.0.0.1:5000 │
+└──────────┴────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2025-09-11T23:34:21.875Z] Received signal SIGHUP 1

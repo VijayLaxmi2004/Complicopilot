@@ -7,9 +7,9 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "authDomain": "complicopilot.vercel.app",
     "rewrites": [
-      { "source": "/__/auth/handler", "destination": "/index.html" }
+      { "source": "/__/auth/handler", "destination": "/index.html" },
+      { "source": "**", "destination": "/index.html" }
     ]
   }
 }
