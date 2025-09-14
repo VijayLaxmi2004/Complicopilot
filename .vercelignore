@@ -1,31 +1,5 @@
-# Dependencies
-node_modules/
-__pycache__/
-*.pyc
-.env
-.env.local
-
-# Development files
-.vscode/
-.idea/
-*.log
-
-# Backend specific (since we're deploying frontend)
-backend/uploads/
-backend/alembic/
-backend/__pycache__/
-docker/
-*.db
-*.sqlite
-
-# Build artifacts
-dist/
-build/
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Firebase
-firebase-debug.log
-.firebaserc
+# Ignore everything except the frontend/public directory for Vercel deployment
+*
+!frontend/
+!frontend/public/
+!frontend/public/**
