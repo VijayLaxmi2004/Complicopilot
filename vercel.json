@@ -1,8 +1,52 @@
 {
   "version": 2,
+  "name": "complicopilot",
+  "buildCommand": "echo 'No build needed for static files'",
+  "outputDirectory": "frontend/public",
   "public": true,
-  "outputDirectory": "frontend",
+  "functions": {
+    "api/**.py": {
+      "runtime": "python3.9"
+    }
+  },
   "rewrites": [
-    { "source": "/__/auth/handler", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/__/auth/handler",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/pages/(.*)",
+      "destination": "/$1",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
   ]
 }
