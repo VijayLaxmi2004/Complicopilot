@@ -3,6 +3,7 @@
 # svc = OCRService()
 # text = svc.extract_text_from_image(receipt_image_path_or_bytes)
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Body, Form
+from fastapi.responses import FileResponse
 from api.auth import get_current_firebase_user
 from typing import Dict, List, Any, Optional
 from sqlalchemy.orm import Session
@@ -32,105 +33,64 @@ def error_response(code: str, message: str, details: Any = None) -> Dict[str, An
         response["error"]["details"] = details
     return response
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_receipt(
-    file: UploadFile = File(...),
-    vendor: Optional[str] = Form(None),
-    date: Optional[str] = Form(None),
-    amount: Optional[float] = Form(None),
-    currency: Optional[str] = Form("INR"),
-    category: Optional[str] = Form("uncategorized"),
-    gstin: Optional[str] = Form("") ,
-    tax_amount: Optional[float] = Form(None),
+
+# New endpoint for multiple file upload and batch processing
+@router.post("/batch", status_code=status.HTTP_201_CREATED)
+async def create_receipts_batch(
+    files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_firebase_user)
-) -> Dict[str, Any]:
+) -> Any:
     """
-    Upload a receipt image, run OCR and parser, and persist metadata.
-    Returns structured and raw data. Requires authentication.
+    Upload multiple receipt images, run OCR and parser, and return batch results as downloadable file.
     """
-    if not file or not file.filename:
-        raise HTTPException(status_code=400, detail=error_response("MISSING_FILE", "No file uploaded"))
-
-    # Check file type (accept only images)
     allowed_types = {"image/png", "image/jpeg", "image/jpg"}
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=415, detail=error_response("UNSUPPORTED_TYPE", f"File type {file.content_type} not allowed"))
-
-    # Determine file size without consuming stream
-    try:
-        file.file.seek(0, io.SEEK_END)
-        size = file.file.tell()
-        file.file.seek(0)
-    except Exception:
-        size = 0
-
-    safe_amount = float(amount) if amount is not None else 0.0
-    safe_vendor = vendor or "Unknown Vendor"
-    safe_date = date or "1970-01-01"
-
-    # Save the uploaded file
-    file_path = UPLOADS_DIR / f"{uuid.uuid4()}_{file.filename}"
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # Perform OCR on the uploaded file
-    try:
-        extracted_text = ocr_service.extract_text_from_image(str(file_path))
-        print(f"DEBUG: OCR extracted text: '{extracted_text}'")
-    except Exception as e:
-        print(f"DEBUG: OCR failed with error: {str(e)}")
-        raise HTTPException(status_code=500, detail=error_response("OCR_FAILED", f"OCR failed: {str(e)}"))
-
-    # Parse structured data from OCR text
+    max_size = 10 * 1024 * 1024  # 10 MB per file
     parser = ParserService()
-    try:
-        parsed = parser.parse(extracted_text)
-        print(f"DEBUG: Parser output: {parsed}")
-    except Exception as e:
-        parsed = {}
-        print(f"DEBUG: Parser failed with error: {str(e)}")
-        # Optionally log error
-        raise HTTPException(status_code=500, detail=error_response("PARSER_FAILED", f"Parser failed: {str(e)}"))
+    batch_results = []
+    file_paths = []
+    errors = []
 
-    obj = Receipt(
-        vendor=parsed.get("vendor") or safe_vendor,
-        date=parsed.get("date") or safe_date,
-        amount=float(parsed.get("total") or safe_amount),
-        currency=currency or "INR",
-        category=category or "uncategorized",
-        gstin=gstin or "",
-        tax_amount=tax_amount,
-        status="needs_review",
-        filename=file.filename,
-        mime_type=file.content_type or "application/octet-stream",
-        extracted={
-            "file": {"size": size},
-            "ocr_text": extracted_text,
-            "parsed": parsed,
-        },
-    )
+    for file in files:
+        if not file or not file.filename:
+            errors.append({"filename": None, "error": "No file uploaded"})
+            continue
+        if file.content_type not in allowed_types:
+            errors.append({"filename": file.filename, "error": f"File type {file.content_type} not allowed"})
+            continue
+        try:
+            file.file.seek(0, io.SEEK_END)
+            size = file.file.tell()
+            file.file.seek(0)
+        except Exception:
+            size = 0
+        if size > max_size:
+            errors.append({"filename": file.filename, "error": "File too large"})
+            continue
+        file_path = UPLOADS_DIR / f"{uuid.uuid4()}_{file.filename}"
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        file_paths.append(str(file_path))
 
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
+    # Batch OCR processing
+    from services.ocr import ocr_service
+    extracted_texts = ocr_service.extract_texts_from_images(file_paths)
 
-    return {
-        "id": obj.id,
-        "vendor": obj.vendor,
-        "date": obj.date,
-        "amount": obj.amount,
-        "currency": obj.currency,
-        "category": obj.category,
-        "gstin": obj.gstin,
-        "tax_amount": obj.tax_amount,
-        "status": obj.status,
-        "filename": obj.filename,
-        "mime_type": obj.mime_type,
-        "extracted": obj.extracted or {},
-        "created_at": obj.created_at.isoformat() if obj.created_at else None,
-        "updated_at": obj.updated_at.isoformat() if obj.updated_at else None,
-    }
+    for idx, text in enumerate(extracted_texts):
+        try:
+            parsed = parser.parse(text)
+        except Exception as e:
+            parsed = {"error": str(e)}
+        batch_results.append({
+            "filename": files[idx].filename,
+            "ocr_text": text,
+            "parsed": parsed
+        })
+
+    # Generate CSV file from batch results
+    from services.compliance import generate_csv_from_batch
+    csv_path = generate_csv_from_batch(batch_results)
+    return FileResponse(csv_path, filename="receipts_batch.csv", media_type="text/csv")
 
 @router.get("/")
 async def list_receipts(

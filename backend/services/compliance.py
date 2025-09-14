@@ -1,3 +1,27 @@
+import pandas as pd
+import tempfile
+
+# Generate CSV from batch OCR/parsed data
+def generate_csv_from_batch(batch_results: List[dict]) -> str:
+    """
+    Given a list of dicts (each with keys like filename, ocr_text, parsed),
+    generate a CSV file and return its path.
+    """
+    # Flatten parsed dict for each result
+    rows = []
+    for item in batch_results:
+        row = {"filename": item.get("filename", "")}
+        parsed = item.get("parsed", {})
+        if isinstance(parsed, dict):
+            for k, v in parsed.items():
+                row[k] = v
+        row["ocr_text"] = item.get("ocr_text", "")
+        rows.append(row)
+    df = pd.DataFrame(rows)
+    # Save to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".csv", mode="w", newline="", encoding="utf-8") as tmp:
+        df.to_csv(tmp.name, index=False)
+        return tmp.name
 """
 Compliance service for validating and checking receipts.
 

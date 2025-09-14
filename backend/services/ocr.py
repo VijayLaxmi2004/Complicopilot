@@ -1,3 +1,17 @@
+# Batch OCR: extract text from multiple images
+    def extract_texts_from_images(self, imgs: List[Union[str, Path, bytes, Image.Image, np.ndarray]]) -> List[str]:
+        """
+        Extract text from a list of images (batch processing).
+        Returns a list of OCR results (one per image).
+        """
+        results = []
+        for img in imgs:
+            try:
+                text = self.extract_text_from_image(img)
+            except Exception as e:
+                text = f"ERROR: {str(e)}"
+            results.append(text)
+        return results
 from __future__ import annotations
 
 import io
