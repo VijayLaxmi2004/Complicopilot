@@ -1,32 +1,14 @@
 {
   "version": 2,
   "name": "complicopilot",
-  "builds": [
+  "rewrites": [
     {
-      "src": "frontend/public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/public/assets/$1"
+      "source": "/__/auth/handler",
+      "destination": "/index.html"
     },
     {
-      "src": "/(index|auth|dashboard|upload)\\.html",
-      "dest": "/frontend/public/$1.html"
-    },
-    {
-      "src": "/(index|auth|dashboard|upload)/?",
-      "dest": "/frontend/public/$1.html"
-    },
-    {
-      "src": "/",
-      "dest": "/frontend/public/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/public/$1"
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ]
 }
