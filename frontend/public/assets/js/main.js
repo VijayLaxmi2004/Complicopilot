@@ -577,7 +577,7 @@ function initUploadPage() {
     let processedReceipts = [];
     const uploadProgress = document.getElementById('upload-progress');
     const uploadProgressText = document.getElementById('upload-progress-text');
-    const exportCsvBtn = document.getElementById('export-csv-btn');
+    let exportCsvBtn = null;
 
     if (dropZone && fileInput) {
         // Click to upload
@@ -629,7 +629,11 @@ function initUploadPage() {
         }
         processedReceipts = [];
         if (uploadProgress) uploadProgress.style.display = '';
-        if (exportCsvBtn) exportCsvBtn.style.display = 'none';
+        // Remove export button if present
+        if (exportCsvBtn && exportCsvBtn.parentNode) {
+            exportCsvBtn.parentNode.removeChild(exportCsvBtn);
+            exportCsvBtn = null;
+        }
         if (uploadProgressText) uploadProgressText.textContent = 'Uploading...';
 
         showStep('processing');
@@ -650,7 +654,24 @@ function initUploadPage() {
 
         if (uploadProgressText) uploadProgressText.textContent = `Processed ${processedCount} of ${files.length} files.`;
         if (uploadProgress) uploadProgress.style.display = 'none';
-        if (exportCsvBtn) exportCsvBtn.style.display = '';
+        // Dynamically add Export to CSV button after upload
+        if (!exportCsvBtn && processedReceipts.length > 0) {
+            exportCsvBtn = document.createElement('button');
+            exportCsvBtn.id = 'export-csv-btn';
+            exportCsvBtn.className = 'btn-primary';
+            exportCsvBtn.textContent = 'Export All to CSV';
+            exportCsvBtn.style.marginTop = '2em';
+            exportCsvBtn.addEventListener('click', function() {
+                if (processedReceipts.length > 0) {
+                    generateAndDownloadBatchCSV(processedReceipts);
+                }
+            });
+            // Insert after drop zone
+            const dropZone = document.getElementById('drop-zone');
+            if (dropZone && dropZone.parentNode) {
+                dropZone.parentNode.insertBefore(exportCsvBtn, dropZone.nextSibling);
+            }
+        }
 
         // Optionally, show a summary or move to review step for the first file
         if (processedReceipts.length > 0) {
