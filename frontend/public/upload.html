@@ -1,15 +1,244 @@
-<!-- Copy of upload.html from pages directory for Firebase Hosting -->
 <!DOCTYPE html>
-<html>
-  <head>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
-    <title>Upload - CompliCopilot</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="assets/img/logo.png" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Receipt - CompliCopilot</title>
     <link rel="stylesheet" href="assets/css/style.css">
-  </head>
-  <body>
-    <!-- ...existing code from upload.html... -->
-    <script defer src="assets/js/main.js"></script>
-  </body>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header dashboard-header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <img src="assets/img/logo.png" alt="CompliCopilot" class="logo">
+                <span class="brand-name">CompliCopilot</span>
+            </div>
+            <div class="dashboard-nav">
+                <a href="dashboard.html" class="btn-secondary">← Back to Dashboard</a>
+                <div class="user-menu">
+                    <button class="user-avatar">
+                        <span class="avatar-text">S</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Upload Content -->
+    <main class="upload-page">
+        <div class="container">
+            <!-- Progress Indicator -->
+            <div class="progress-steps">
+                <div class="step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Upload</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Process</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Review</div>
+                </div>
+            </div>
+
+            <!-- Step 1: Upload -->
+            <section class="upload-section active" id="upload-step">
+                <div class="upload-container">
+                    <h1>Upload Your Receipt</h1>
+                    <p class="upload-subtitle">Drag and drop your receipt image or click to browse</p>
+                    
+                    <div class="drop-zone" id="drop-zone">
+                        <div class="drop-zone-content">
+                            <div class="upload-icon"></div>
+                            <div class="drop-text">
+                                <h3>Drag & Drop or Click to Upload</h3>
+                                <p>Supports JPG, PNG, PDF files up to 10MB</p>
+                            </div>
+                            <button class="btn-primary">Choose File</button>
+                        </div>
+                        <input type="file" id="file-input" accept="image/*,.pdf" hidden>
+                    </div>
+
+                    <div class="upload-tips">
+                        <h4>Tips for best results:</h4>
+                        <ul>
+                            <li>Ensure the receipt is well-lit and clearly visible</li>
+                            <li>Include all edges of the receipt in the image</li>
+                            <li>Avoid shadows or glare on important text</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2: Processing -->
+            <section class="processing-section" id="processing-step">
+                <div class="processing-container">
+                    <div class="processing-animation">
+                        <div class="spinner"></div>
+                    </div>
+                    <h2>Analyzing Your Receipt...</h2>
+                    <p class="processing-text">Our AI is extracting information and validating data</p>
+                    <div class="processing-steps">
+                        <div class="process-item active">
+                            <span class="process-icon">✓</span>
+                            <span>Receipt uploaded successfully</span>
+                        </div>
+                        <div class="process-item active">
+                            <span class="process-icon">⟳</span>
+                            <span>Extracting text and data</span>
+                        </div>
+                        <div class="process-item">
+                            <span class="process-icon">○</span>
+                            <span>Categorizing expense</span>
+                        </div>
+                        <div class="process-item">
+                            <span class="process-icon">○</span>
+                            <span>Validating compliance</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 3: Review -->
+            <section class="review-section" id="review-step">
+                <div class="review-container">
+                    <h1>Review Extracted Data</h1>
+                    <p class="review-subtitle">Please verify the information below and make any necessary corrections</p>
+
+                    <div class="review-content">
+                        <div class="receipt-preview">
+                            <div class="preview-header">
+                                <h3>Receipt Preview</h3>
+                            </div>
+                            <div class="preview-image">
+                                <img id="receipt-preview" src="" alt="Receipt Preview">
+                            </div>
+                        </div>
+
+                        <div class="extracted-data">
+                            <form class="review-form" id="review-form">
+                                <div class="form-section">
+                                    <h3>Basic Information</h3>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="vendor-name">Vendor Name</label>
+                                            <input type="text" id="vendor-name" value="Starbucks Coffee" class="extracted-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="receipt-date">Date</label>
+                                            <input type="date" id="receipt-date" value="2024-03-19" class="extracted-field">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="total-amount">Total Amount</label>
+                                            <input type="number" id="total-amount" value="450.00" step="0.01" class="extracted-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="currency">Currency</label>
+                                            <select id="currency" class="extracted-field">
+                                                <option value="INR" selected>INR (₹)</option>
+                                                <option value="USD">USD ($)</option>
+                                                <option value="EUR">EUR (€)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <h3>Categorization</h3>
+                                    <div class="form-group">
+                                        <label for="expense-category">Category</label>
+                                        <div class="category-container">
+                                            <select id="expense-category" class="extracted-field suggested">
+                                                <option value="meals" selected>🍽️ Meals & Entertainment</option>
+                                                <option value="transport">🚗 Transportation</option>
+                                                <option value="office">🏢 Office Supplies</option>
+                                                <option value="software">💻 Software & Tools</option>
+                                                <option value="marketing">📢 Marketing</option>
+                                                <option value="other">📦 Other</option>
+                                            </select>
+                                            <span class="ai-suggestion">
+                                                <span class="suggestion-icon">🤖</span>
+                                                AI Suggested
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="description">Description (Optional)</label>
+                                        <textarea id="description" placeholder="Add notes about this expense..." class="extracted-field"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <h3>Tax & Compliance</h3>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="gst-number">GST Number</label>
+                                            <input type="text" id="gst-number" value="" class="extracted-field warning" placeholder="Not found on receipt">
+                                            <div class="field-warning">
+                                                <span class="warning-icon">⚠️</span>
+                                                GST number not detected. Please add manually if required.
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="tax-amount">Tax Amount</label>
+                                            <input type="number" id="tax-amount" value="67.50" step="0.01" class="extracted-field">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="validation-summary">
+                                    <div class="validation-item success">
+                                        <span class="validation-icon">✓</span>
+                                        <span>Vendor name extracted successfully</span>
+                                    </div>
+                                    <div class="validation-item success">
+                                        <span class="validation-icon">✓</span>
+                                        <span>Amount and date verified</span>
+                                    </div>
+                                    <div class="validation-item warning">
+                                        <span class="validation-icon">⚠️</span>
+                                        <span>GST number missing - may be required for tax filing</span>
+                                    </div>
+                                    <div class="validation-item success">
+                                        <span class="validation-icon">✓</span>
+                                        <span>Category automatically suggested</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="button" class="btn-secondary" onclick="goBackToUpload()">Upload Different Receipt</button>
+                                    <button type="submit" class="btn-primary glow">Approve & Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Success Message -->
+            <section class="success-section" id="success-step">
+                <div class="success-container">
+                    <div class="success-animation">
+                        <div class="success-checkmark">✓</div>
+                    </div>
+                    <h2>Receipt Processed Successfully!</h2>
+                    <p>Your expense has been added to your dashboard</p>
+                    <div class="success-actions">
+                        <a href="dashboard.html" class="btn-primary">Back to Dashboard</a>
+                        <button class="btn-secondary" onclick="uploadAnother()">Upload Another Receipt</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="assets/js/main.js"></script>
+</body>
 </html>
