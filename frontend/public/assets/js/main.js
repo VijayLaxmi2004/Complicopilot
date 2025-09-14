@@ -573,38 +573,98 @@ function initUploadPage() {
     const successStep = document.getElementById('success-step');
     const reviewForm = document.getElementById('review-form');
     
-    // File upload functionality
+    // File upload functionality (multi-file)
+    let processedReceipts = [];
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadProgressText = document.getElementById('upload-progress-text');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+
     if (dropZone && fileInput) {
         // Click to upload
         dropZone.addEventListener('click', () => {
             fileInput.click();
         });
-        
+
         // Drag and drop
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
         });
-        
+
         dropZone.addEventListener('dragleave', () => {
             dropZone.classList.remove('dragover');
         });
-        
+
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                handleFileUpload(files[0]);
+                handleMultipleFileUpload(files);
             }
         });
-        
+
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleFileUpload(e.target.files[0]);
+                handleMultipleFileUpload(e.target.files);
             }
         });
+    }
+
+    // Export to CSV button handler
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', function() {
+            if (processedReceipts.length > 0) {
+                generateAndDownloadBatchCSV(processedReceipts);
+            }
+        });
+    }
+
+    // Multi-file upload handler
+    async function handleMultipleFileUpload(fileList) {
+        const token = localStorage.getItem('ccp_token');
+        if (!token) {
+            alert('You are not logged in. Please log in to upload files.');
+            return;
+        }
+        processedReceipts = [];
+        if (uploadProgress) uploadProgress.style.display = '';
+        if (exportCsvBtn) exportCsvBtn.style.display = 'none';
+        if (uploadProgressText) uploadProgressText.textContent = 'Uploading...';
+
+        showStep('processing');
+        updateProgressStep(2);
+
+        const files = Array.from(fileList);
+        let processedCount = 0;
+        for (let i = 0; i < files.length; i++) {
+            if (uploadProgressText) uploadProgressText.textContent = `Uploading and processing file ${i+1} of ${files.length}...`;
+            try {
+                const receipt = await handleFileUpload(files[i], true); // true = batch mode
+                if (receipt) processedReceipts.push(receipt);
+            } catch (err) {
+                console.error('Error processing file:', files[i].name, err);
+            }
+            processedCount++;
+        }
+
+        if (uploadProgressText) uploadProgressText.textContent = `Processed ${processedCount} of ${files.length} files.`;
+        if (uploadProgress) uploadProgress.style.display = 'none';
+        if (exportCsvBtn) exportCsvBtn.style.display = '';
+
+        // Optionally, show a summary or move to review step for the first file
+        if (processedReceipts.length > 0) {
+            // Show preview for the first file
+            loadReceiptPreview(files[0], processedReceipts[0]);
+            setTimeout(() => {
+                showStep('review');
+                updateProgressStep(3);
+                populateReviewFields(processedReceipts[0]);
+            }, 1000);
+        } else {
+            showStep('upload');
+            updateProgressStep(1);
+        }
     }
     
     // Form submission for review
@@ -661,19 +721,23 @@ function initUploadPage() {
     }
     
     // File upload handler
-    async function handleFileUpload(file) {
+    // Single file upload handler (used by batch and single)
+    async function handleFileUpload(file, batchMode = false) {
         const token = localStorage.getItem('ccp_token');
         if (!token) {
             alert('You are not logged in. Please log in to upload files.');
             return;
         }
 
-        // Show processing step
-        showStep('processing');
-        updateProgressStep(2);
+        if (!batchMode) {
+            showStep('processing');
+            updateProgressStep(2);
+            if (uploadProgress) uploadProgress.style.display = '';
+            if (uploadProgressText) uploadProgressText.textContent = 'Uploading...';
+        }
 
-        const formData = new FormData();
-        formData.append('file', file);
+    const formData = new FormData();
+    formData.append('file', file);
 
         try {
             const response = await fetch('http://localhost:8000/api/v1/receipts/', {
@@ -690,28 +754,72 @@ function initUploadPage() {
 
             const result = await response.json();
             console.log('Upload successful:', result);
-            
-            // Store the receipt data for the review step
-            localStorage.setItem('current_receipt', JSON.stringify(result));
-            window._ccp_uploaded_receipt = result; // Also store globally for the form handler
-            
-            // Show preview with backend data
-            loadReceiptPreview(file, result);
-            
-            // Move to review step after a brief delay
-            setTimeout(() => {
-                showStep('review');
-                updateProgressStep(3);
-                populateReviewFields(result);
-            }, 1000);
-            
+
+            if (!batchMode) {
+                // Store the receipt data for the review step
+                localStorage.setItem('current_receipt', JSON.stringify(result));
+                window._ccp_uploaded_receipt = result; // Also store globally for the form handler
+                // Show preview with backend data
+                loadReceiptPreview(file, result);
+                // Move to review step after a brief delay
+                setTimeout(() => {
+                    showStep('review');
+                    updateProgressStep(3);
+                    populateReviewFields(result);
+                }, 1000);
+                if (uploadProgress) uploadProgress.style.display = 'none';
+            }
+            return result;
         } catch (error) {
             console.error('Error during file upload:', error);
-            alert(`File upload failed: ${error.message}`);
-            // Go back to upload step on error
-            showStep('upload');
-            updateProgressStep(1);
+            if (!batchMode) {
+                alert(`File upload failed: ${error.message}`);
+                // Go back to upload step on error
+                showStep('upload');
+                updateProgressStep(1);
+                if (uploadProgress) uploadProgress.style.display = 'none';
+            }
+            return null;
         }
+    // Generate and download CSV for all processed receipts
+    function generateAndDownloadBatchCSV(receipts) {
+        if (!receipts || receipts.length === 0) return;
+        // Prepare CSV data
+        const headers = [
+            'Receipt ID', 'Date', 'Vendor Name', 'Total Amount', 'Currency', 'Category', 'GST Number', 'Tax Amount', 'Status', 'Created At', 'Filename'
+        ];
+        const csvRows = [headers.join(',')];
+        receipts.forEach(savedData => {
+            const row = [
+                savedData.id || 'N/A',
+                savedData.date || '',
+                savedData.vendor || '',
+                savedData.amount || 0,
+                savedData.currency || 'INR',
+                savedData.category || 'uncategorized',
+                savedData.gstin || '',
+                savedData.tax_amount || '',
+                savedData.status || 'approved',
+                savedData.created_at || new Date().toISOString(),
+                savedData.filename || ''
+            ].map(value => {
+                const v = value?.toString() || '';
+                return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
+            });
+            csvRows.push(row.join(','));
+        });
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `receipts_batch_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showNotification('CSV Downloaded', 'All receipt data has been exported to CSV file', 'success');
+    }
     }
 
     // Update loadReceiptPreview to accept backend data if needed
