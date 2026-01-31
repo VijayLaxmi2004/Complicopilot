@@ -1,14 +1,48 @@
-import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { app } from "./firebase.js";
 
 const auth = getAuth(app);
 console.log("Firebase Auth initialized:", auth);
 console.log("Firebase app config:", auth.app.options);
 
-window.addEventListener("DOMContentLoaded", () => {
+// Detect if we're on mobile or accessing via IP (not localhost)
+function shouldUseRedirect() {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isIPAddress = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(window.location.hostname);
+
+  console.log("Auth detection:", { isMobile, isLocalhost, isIPAddress, hostname: window.location.hostname });
+
+  // Use redirect for mobile or when accessing via IP address
+  return isMobile || isIPAddress;
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
   console.log("Auth Google script loaded");
   console.log("Current location:", window.location.href);
   console.log("Auth domain from config:", auth.app.options.authDomain);
+
+  // Check for redirect result (if coming back from Google sign-in)
+  try {
+    const result = await getRedirectResult(auth);
+    if (result) {
+      console.log("🎉 Redirect sign-in successful!");
+      const user = result.user;
+      const idToken = await user.getIdToken();
+
+      localStorage.setItem('ccp_token', idToken);
+      localStorage.setItem('ccp_user_email', user.email || '');
+      localStorage.setItem('ccp_user_name', user.displayName || '');
+      localStorage.setItem('ccp_user_photo', user.photoURL || '');
+      localStorage.setItem('ccp_user_uid', user.uid || '');
+
+      console.log("✅ User authenticated via redirect:", user.email);
+      window.location.href = 'dashboard.html';
+      return;
+    }
+  } catch (error) {
+    console.error("Redirect result error:", error);
+  }
   
   // Test Firebase connection
   console.log("Testing Firebase connection...");
@@ -30,98 +64,81 @@ window.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      
+
       console.log("🔥 Google sign-in button clicked!");
-      console.log("Event target:", e.target);
-      console.log("Default prevented:", e.defaultPrevented);
-      
+      const useRedirect = shouldUseRedirect();
+      console.log("Using redirect method:", useRedirect);
+
       try {
         // Show loading state
         googleBtn.disabled = true;
-        googleBtn.textContent = "Signing in...";
-        console.log("Button disabled and text changed");
-        
-        // Wait a moment to ensure we're not conflicting with other handlers
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        googleBtn.textContent = useRedirect ? "Redirecting..." : "Signing in...";
+
         const provider = new GoogleAuthProvider();
-        console.log("GoogleAuthProvider created:", provider);
-        
-        // Add some basic scopes
         provider.addScope('email');
         provider.addScope('profile');
-        console.log("Scopes added to provider");
-        
-        console.log("🚀 Starting Firebase signInWithPopup...");
-        console.log("Auth object:", auth);
-        console.log("Provider object:", provider);
-        
-        const result = await signInWithPopup(auth, provider);
-        console.log("🎉 Sign-in popup completed successfully!");
-        console.log("Full result:", result);
-        
-        const user = result.user;
-        console.log("User object:", user);
-        console.log("Google sign-in successful:", {
-          email: user.email,
-          name: user.displayName,
-          uid: user.uid,
-          photoURL: user.photoURL
-        });
-        
-        const idToken = await user.getIdToken();
-        console.log("ID token obtained (length):", idToken.length);
-        
-        localStorage.setItem('ccp_token', idToken);
-        localStorage.setItem('ccp_user_email', user.email || '');
-        localStorage.setItem('ccp_user_name', user.displayName || '');
-        localStorage.setItem('ccp_user_photo', user.photoURL || '');
-        localStorage.setItem('ccp_user_uid', user.uid || '');
-        console.log("Data saved to localStorage");
-        
-        // Show success message
-        console.log("✅ Authentication successful! Redirecting to dashboard...");
-        alert("Successfully signed in with Google!");
-        
-        // Redirect to dashboard
-        window.location.href = 'dashboard.html';
-        
+
+        if (useRedirect) {
+          // Use redirect for mobile/IP access - works better across devices
+          console.log("🚀 Starting Firebase signInWithRedirect...");
+          await signInWithRedirect(auth, provider);
+          // Page will redirect to Google, then back here
+          // getRedirectResult() at page load will handle the result
+        } else {
+          // Use popup for desktop localhost
+          console.log("🚀 Starting Firebase signInWithPopup...");
+          const result = await signInWithPopup(auth, provider);
+          console.log("🎉 Sign-in popup completed successfully!");
+
+          const user = result.user;
+          console.log("Google sign-in successful:", user.email);
+
+          const idToken = await user.getIdToken();
+          localStorage.setItem('ccp_token', idToken);
+          localStorage.setItem('ccp_user_email', user.email || '');
+          localStorage.setItem('ccp_user_name', user.displayName || '');
+          localStorage.setItem('ccp_user_photo', user.photoURL || '');
+          localStorage.setItem('ccp_user_uid', user.uid || '');
+
+          console.log("✅ Authentication successful! Redirecting to dashboard...");
+          window.location.href = 'dashboard.html';
+        }
+
       } catch (error) {
         console.error("❌ Firebase Google sign-in error:");
         console.error("Error code:", error.code);
         console.error("Error message:", error.message);
-        console.error("Full error object:", error);
-        console.error("Error stack:", error.stack);
-        
-        let errorMessage = `Firebase Auth failed: ${error.message}`;
-        
-        // Handle Firebase-specific error codes
+
+        let errorMessage = `Sign-in failed: ${error.message}`;
+
         if (error.code === 'auth/popup-blocked') {
-          errorMessage = "Popup was blocked. Please allow popups and try again.";
-          console.log("💡 Try: Allow popups in browser settings");
+          errorMessage = "Popup was blocked. Trying redirect method...";
+          // Fallback to redirect
+          try {
+            const provider = new GoogleAuthProvider();
+            provider.addScope('email');
+            provider.addScope('profile');
+            await signInWithRedirect(auth, provider);
+            return;
+          } catch (redirectError) {
+            errorMessage = "Sign-in failed. Please try again.";
+          }
         } else if (error.code === 'auth/popup-closed-by-user') {
           errorMessage = "Sign-in was cancelled.";
-          console.log("💡 User closed the popup");
         } else if (error.code === 'auth/unauthorized-domain') {
-          errorMessage = "Domain not authorized in Firebase Console. Please add localhost.";
-          console.log("💡 Add localhost to Firebase Console authorized domains");
+          errorMessage = "This domain is not authorized. Please add " + window.location.hostname + " to Firebase Console → Authentication → Settings → Authorized domains";
+          console.log("💡 Add this domain to Firebase:", window.location.hostname);
         } else if (error.code === 'auth/operation-not-allowed') {
           errorMessage = "Google sign-in not enabled in Firebase Console.";
-          console.log("💡 Enable Google sign-in in Firebase Console");
-        } else if (error.code === 'auth/invalid-api-key') {
-          errorMessage = "Invalid Firebase API key.";
-          console.log("💡 Check Firebase config API key");
         }
-        
-        console.error("Showing error to user:", errorMessage);
+
         alert(errorMessage);
-        
+
         // Reset button state
         googleBtn.disabled = false;
         googleBtn.innerHTML = '<span class="social-icon">G</span>Google';
-        console.log("Button state reset");
       }
-    }, true); // Use capture phase to get the event first
+    }, true);
   } else {
     console.error("❌ Google button NOT found!");
     console.log("Available buttons:", document.querySelectorAll('button'));

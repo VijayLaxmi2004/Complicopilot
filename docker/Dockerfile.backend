@@ -6,14 +6,14 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
-# --- INSTALL TESSERACT SYSTEM DEPENDENCIES ---
-# This command updates the package list and installs the Tesseract engine
-# and its development files, which pytesseract needs to communicate with.
+# --- INSTALL TESSERACT AND PDF DEPENDENCIES ---
+# Tesseract for OCR, Poppler for PDF to image conversion
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* && \
     apt-get update --fix-missing && apt-get install -y \
     tesseract-ocr \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
-# ---------------------------------------------
+# -----------------------------------------------
 
 # Copy the requirements file into the container
 COPY requirements.txt .

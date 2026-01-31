@@ -924,6 +924,14 @@ function initUploadPage() {
             const reader = new FileReader();
             reader.onload = (e) => { thumbnailImg.src = e.target.result; };
             reader.readAsDataURL(file);
+        } else if (file && file.type === 'application/pdf') {
+            // PDF placeholder
+            thumbnailImg.style.display = 'none';
+            const pdfPlaceholder = document.createElement('div');
+            pdfPlaceholder.className = 'card-thumbnail pdf-thumbnail';
+            pdfPlaceholder.innerHTML = '📄';
+            pdfPlaceholder.title = 'PDF Document';
+            thumbnailImg.parentNode.insertBefore(pdfPlaceholder, thumbnailImg);
         } else {
             thumbnailImg.src = 'assets/img/logo.png';
         }

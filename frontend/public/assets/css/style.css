@@ -2189,6 +2189,15 @@ select:-webkit-autofill {
     background: var(--bg-primary);
 }
 
+.card-thumbnail.pdf-thumbnail {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
+}
+
 .card-title {
     flex: 1;
     min-width: 0;

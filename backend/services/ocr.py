@@ -8,6 +8,13 @@ import numpy as np
 import pytesseract
 from PIL import Image
 
+# PDF support
+try:
+    from pdf2image import convert_from_path, convert_from_bytes
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -19,6 +26,52 @@ def _ensure_tesseract_cmd():
     if cmd:
         pytesseract.pytesseract.tesseract_cmd = cmd
         logger.info(f"Tesseract command set to: {cmd}")
+
+
+def _is_pdf_file(file_path: Union[str, Path]) -> bool:
+    """Check if a file is a PDF based on extension or magic bytes."""
+    path_str = str(file_path).lower()
+    if path_str.endswith('.pdf'):
+        return True
+    # Check magic bytes
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(5)
+            return header == b'%PDF-'
+    except:
+        return False
+
+
+def _is_pdf_bytes(data: bytes) -> bool:
+    """Check if bytes data is a PDF."""
+    return data[:5] == b'%PDF-'
+
+
+def _convert_pdf_to_images(pdf_input: Union[str, Path, bytes], dpi: int = 200) -> List[Image.Image]:
+    """
+    Convert PDF to list of PIL Images.
+
+    Args:
+        pdf_input: PDF file path or bytes
+        dpi: Resolution for conversion (higher = better quality but slower)
+
+    Returns:
+        List of PIL Image objects (one per page)
+    """
+    if not PDF_SUPPORT:
+        raise ImportError("pdf2image is not installed. Install with: pip install pdf2image")
+
+    try:
+        if isinstance(pdf_input, bytes):
+            images = convert_from_bytes(pdf_input, dpi=dpi)
+        else:
+            images = convert_from_path(str(pdf_input), dpi=dpi)
+
+        logger.info(f"Converted PDF to {len(images)} image(s)")
+        return images
+    except Exception as e:
+        logger.error(f"PDF conversion failed: {e}")
+        raise
 
 
 def _as_numpy_bgr(img: Union[str, Path, bytes, Image.Image, np.ndarray]) -> np.ndarray:
@@ -108,31 +161,82 @@ def _preprocess_pipeline_clahe(bgr: np.ndarray) -> np.ndarray:
 
 
 class OCRService:
-    """Service for extracting text from images using Tesseract OCR."""
-    
+    """Service for extracting text from images and PDFs using Tesseract OCR."""
+
     def __init__(self, tesseract_config: str = "--oem 3 --psm 6"):
         """
         Initialize OCR service.
-        
+
         Args:
             tesseract_config: Tesseract configuration string
         """
         self.tesseract_config = tesseract_config
         _ensure_tesseract_cmd()
         logger.info("OCRService initialized")
-    
+        logger.info(f"PDF support available: {PDF_SUPPORT}")
+
+    def extract_text_from_pdf(self, pdf_input: Union[str, Path, bytes]) -> str:
+        """
+        Extract text from a PDF file by converting pages to images and running OCR.
+
+        Args:
+            pdf_input: PDF file path or bytes
+
+        Returns:
+            Combined extracted text from all pages
+        """
+        if not PDF_SUPPORT:
+            raise ImportError("PDF support requires pdf2image. Install with: pip install pdf2image")
+
+        try:
+            # Convert PDF to images
+            images = _convert_pdf_to_images(pdf_input)
+
+            if not images:
+                logger.warning("PDF conversion returned no images")
+                return ""
+
+            # Extract text from each page
+            all_text = []
+            for i, page_image in enumerate(images):
+                logger.info(f"Processing PDF page {i + 1}/{len(images)}")
+                page_text = self._extract_text_from_pil_image(page_image)
+                if page_text.strip():
+                    all_text.append(f"--- Page {i + 1} ---\n{page_text}")
+
+            combined_text = "\n\n".join(all_text)
+            logger.info(f"PDF OCR complete: {len(combined_text)} characters from {len(images)} page(s)")
+            return combined_text
+
+        except Exception as e:
+            logger.error(f"PDF OCR failed: {e}")
+            return ""
+
+    def _extract_text_from_pil_image(self, pil_image: Image.Image) -> str:
+        """Extract text from a PIL Image."""
+        return self.extract_text_from_image(pil_image)
+
     def extract_text_from_image(self, img: Union[str, Path, bytes, Image.Image, np.ndarray]) -> str:
         """
-        Extract text from a single image using multiple preprocessing techniques.
-        
+        Extract text from a single image or PDF using multiple preprocessing techniques.
+
         Args:
-            img: Image input (file path, bytes, PIL Image, or numpy array)
-            
+            img: Image/PDF input (file path, bytes, PIL Image, or numpy array)
+
         Returns:
             Extracted text string
         """
         try:
-            # Convert to OpenCV format
+            # Check if input is a PDF
+            if isinstance(img, (str, Path)) and _is_pdf_file(img):
+                logger.info(f"Detected PDF file: {img}")
+                return self.extract_text_from_pdf(img)
+
+            if isinstance(img, bytes) and _is_pdf_bytes(img):
+                logger.info("Detected PDF bytes")
+                return self.extract_text_from_pdf(img)
+
+            # Convert to OpenCV format for images
             bgr_image = _as_numpy_bgr(img)
             if bgr_image is None:
                 raise ValueError("Failed to load image")

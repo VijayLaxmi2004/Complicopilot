@@ -45,7 +45,7 @@ async def create_receipts_batch(
     Upload multiple receipt images, run OCR and parser, and return batch results as JSON.
     Returns individual success/error status for each file.
     """
-    allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+    allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp", "application/pdf"}
     max_size = 10 * 1024 * 1024  # 10 MB per file
     max_files = 10  # Maximum files per batch
     parser = ParserService()
@@ -150,9 +150,9 @@ async def create_receipt(
     """
     Upload a single receipt image, run OCR and parser, and return the result.
     """
-    allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+    allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp", "application/pdf"}
     max_size = 10 * 1024 * 1024  # 10 MB
-    
+
     if not file or not file.filename:
         raise HTTPException(status_code=400, detail=error_response("MISSING_FILE", "No file uploaded"))
     

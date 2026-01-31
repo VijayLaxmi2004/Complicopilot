@@ -11,6 +11,7 @@ pytesseract
 opencv-python-headless
 Pillow
 numpy
+pdf2image
 requests
 passlib[bcrypt]
 python-jose
