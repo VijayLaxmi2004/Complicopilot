@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - CompliCopilot</title>
+    <link rel="stylesheet" href="../public/assets/css/style.css">
+    
+    <!-- Page-Specific Styles -->
+    <style>
+        /* Profile Layout Grid */
+        .profile-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 32px;
+            padding: 32px 0;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar Navigation */
+        .settings-sidebar {
+            /* Changed default to Dark Slate for dark theme compatibility */
+            background: var(--bg-card, #1e293b);
+            border: 1px solid var(--border-color, #334155);
+            border-radius: 12px;
+            padding: 16px;
+            height: fit-content;
+        }
+
+        .settings-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            /* Light grey text for dark mode */
+            color: var(--text-secondary, #94a3b8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .settings-nav-item:hover {
+            background: var(--bg-hover, #334155);
+            color: var(--text-primary, #f8fafc);
+        }
+
+        .settings-nav-item.active {
+            /* Semi-transparent primary color for active state */
+            background: var(--primary-light, rgba(99, 102, 241, 0.1));
+            color: var(--primary-color, #6366f1);
+            font-weight: 600;
+        }
+
+        /* Main Content Cards */
+        .profile-card {
+            /* Changed default to Dark Slate */
+            background: var(--bg-card, #1e293b);
+            border: 1px solid var(--border-color, #334155);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .profile-card h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.25rem;
+            /* White text */
+            color: var(--text-primary, #f8fafc);
+        }
+
+        .profile-card p.subtitle {
+            /* Light grey text */
+            color: var(--text-secondary, #94a3b8);
+            font-size: 0.875rem;
+            margin-bottom: 24px;
+        }
+
+        /* Avatar Upload Section */
+        .avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 32px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border-color, #334155);
+        }
+
+        .large-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            /* Use theme primary color */
+            background: var(--primary-color, #6366f1); 
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .avatar-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .avatar-help {
+            font-size: 0.75rem;
+            color: var(--text-secondary, #64748b);
+        }
+
+        /* Grid for Form Fields */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .form-grid.full {
+            grid-template-columns: 1fr;
+        }
+
+        /* Input Styling - Updated for Dark Theme */
+        .profile-card input[type="text"],
+        .profile-card input[type="email"],
+        .profile-card input[type="tel"],
+        .profile-card input[type="password"],
+        .profile-card select,
+        .profile-card textarea {
+            width: 100%;
+            padding: 12px;
+            /* Dark border */
+            border: 1px solid var(--border-color, #475569);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            /* Dark background for inputs */
+            background: var(--bg-input, #0f172a);
+            /* Light text for inputs */
+            color: var(--text-primary, #f8fafc);
+            transition: border-color 0.2s;
+        }
+
+        .profile-card input:focus,
+        .profile-card select:focus,
+        .profile-card textarea:focus {
+            outline: none;
+            border-color: var(--primary-color, #6366f1);
+            box-shadow: 0 0 0 3px var(--primary-light, rgba(99, 102, 241, 0.2));
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .profile-container {
+                grid-template-columns: 1fr;
+                padding: 16px;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header (Consistent with Dashboard) -->
+    <header class="header dashboard-header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <a href="dashboard.html" style="text-decoration: none; display: flex; align-items: center; gap: 8px; color: inherit;">
+                    <img src="../public/assets/img/logo.png" alt="CompliCopilot" class="logo">
+                    <span class="brand-name">CompliCopilot</span>
+                </a>
+            </div>
+            <div class="dashboard-nav">
+                <a href="dashboard.html" class="btn-secondary">← Back to Dashboard</a>
+                <div class="user-menu">
+                    <button class="user-avatar" onclick="toggleUserMenu()">
+                        <span class="avatar-text">S</span>
+                    </button>
+                    <!-- Dropdown reused from dashboard -->
+                    <div class="user-dropdown" id="user-dropdown">
+                        <a href="profile.html" class="dropdown-item active">Profile Settings</a>
+                        <a href="#" class="dropdown-item">Billing</a>
+                        <a href="#" class="dropdown-item">Help</a>
+                        <hr class="dropdown-divider">
+                        <a href="index.html" class="dropdown-item">Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard">
+        <div class="container">
+            
+            <div class="profile-container">
+                <!-- Sidebar Navigation -->
+                <aside class="settings-sidebar">
+                    <nav>
+                        <a href="#general" class="settings-nav-item active">
+                            <span>👤</span> General Profile
+                        </a>
+                        <a href="#company" class="settings-nav-item">
+                            <span>🏢</span> Company & GST
+                        </a>
+                        <a href="#notifications" class="settings-nav-item">
+                            <span>🔔</span> Notifications
+                        </a>
+                        <a href="#security" class="settings-nav-item">
+                            <span>🔒</span> Security
+                        </a>
+                        <a href="#billing" class="settings-nav-item">
+                            <span>💳</span> Billing & Plan
+                        </a>
+                    </nav>
+                </aside>
+
+                <!-- Profile Content Area -->
+                <section class="settings-content">
+                    
+                    <!-- General Profile Card -->
+                    <div class="profile-card" id="general">
+                        <h2>Personal Information</h2>
+                        <p class="subtitle">Update your photo and personal details here.</p>
+
+                        <div class="avatar-section">
+                            <div class="large-avatar">S</div>
+                            <div class="avatar-actions">
+                                <div style="display: flex; gap: 12px;">
+                                    <button class="btn-secondary btn-small">Change Photo</button>
+                                    <button class="btn-secondary btn-small" style="color: #ef4444; border-color: #ef4444;">Remove</button>
+                                </div>
+                                <span class="avatar-help">JPG, GIF or PNG. Max size of 800K</span>
+                            </div>
+                        </div>
+
+                        <form>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="first-name">First Name</label>
+                                    <input type="text" id="first-name" value="Siddharth" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="last-name">Last Name</label>
+                                    <input type="text" id="last-name" value="Verma" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email Address</label>
+                                    <input type="email" id="email" value="sid.verma@example.com" disabled style="background-color: var(--bg-hover, #334155); cursor: not-allowed; opacity: 0.7;">
+                                </div>
+                                <div class="form-group">
+                                    <label for="phone">Phone Number</label>
+                                    <input type="tel" id="phone" placeholder="+91 98765 43210">
+                                </div>
+                            </div>
+                            
+                            <div class="form-options" style="margin-top: 24px; justify-content: flex-end;">
+                                <button type="submit" class="btn-primary glow">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Company Settings Card -->
+                    <div class="profile-card" id="company">
+                        <h2>Company Details</h2>
+                        <p class="subtitle">Manage your business information for invoicing and tax.</p>
+
+                        <form>
+                            <div class="form-grid full">
+                                <div class="form-group">
+                                    <label for="company-name">Company Name</label>
+                                    <input type="text" id="company-name" value="Verma Tech Solutions Pvt Ltd">
+                                </div>
+                                
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="gstin">GSTIN / Tax ID</label>
+                                        <input type="text" id="gstin" value="27ABCDE1234F1Z5" placeholder="e.g. 27ABCDE1234F1Z5">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="currency">Default Currency</label>
+                                        <select id="currency">
+                                            <option value="INR" selected>INR (₹) - Indian Rupee</option>
+                                            <option value="USD">USD ($) - US Dollar</option>
+                                            <option value="EUR">EUR (€) - Euro</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="address">Billing Address</label>
+                                    <textarea id="address" rows="3">Plot No. 45, Tech Park, Sector 5, Bangalore, KA</textarea>
+                                </div>
+                            </div>
+
+                            <div class="form-options" style="margin-top: 24px; justify-content: flex-end;">
+                                <button type="submit" class="btn-primary glow">Update Company Info</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Security Card -->
+                    <div class="profile-card" id="security">
+                        <h2>Security</h2>
+                        <p class="subtitle">Manage your password and account security.</p>
+                        
+                        <form>
+                            <div class="form-grid full">
+                                <div class="form-group">
+                                    <label for="current-pass">Current Password</label>
+                                    <input type="password" id="current-pass">
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="new-pass">New Password</label>
+                                        <input type="password" id="new-pass">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="confirm-pass">Confirm New Password</label>
+                                        <input type="password" id="confirm-pass">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-options" style="margin-top: 24px; justify-content: space-between; align-items: center;">
+                                <a href="#" style="color: #ef4444; font-size: 0.9rem; text-decoration: none;">Deactivate Account</a>
+                                <button type="submit" class="btn-secondary">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+
+                </section>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 CompliCopilot. Built for small business success.</p>
+        </div>
+    </footer>
+
+    <script src="../public/assets/js/main.js"></script>
+    
+    <!-- Simple script for sidebar active state (Simulated) -->
+    <script>
+        document.querySelectorAll('.settings-nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                // Remove active class from all
+                document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
+                // Add to clicked
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

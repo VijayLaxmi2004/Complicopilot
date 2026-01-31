@@ -18,16 +18,10 @@
                 
                 <a href="upload.html" class="btn-primary glow">Upload New Receipt</a>
                 <div class="user-menu">
-                    <button class="user-avatar" onclick="toggleUserMenu()">
+                    <!-- CHANGED: Replaced Dropdown Button with Direct Link -->
+                    <a href="profile.html" class="user-avatar" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
                         <span class="avatar-text">S</span>
-                    </button>
-                    <div class="user-dropdown" id="user-dropdown">
-                        <a href="#" class="dropdown-item">Profile Settings</a>
-                        <a href="#" class="dropdown-item">Billing</a>
-                        <a href="#" class="dropdown-item">Help</a>
-                        <hr class="dropdown-divider">
-                        <a href="index.html" class="dropdown-item">Sign Out</a>
-                    </div>
+                    </a>
                 </div>
             </div>
         </nav>
@@ -205,4 +199,5 @@
     </aside>
 
     <script src="../public/assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
