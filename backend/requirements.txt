@@ -1,8 +1,17 @@
 fastapi==0.112.1
 uvicorn[standard]==0.30.6
 pydantic==2.8.2
+pydantic[email]
 python-multipart==0.0.9
 python-dotenv==1.0.1
 SQLAlchemy==2.0.36
 psycopg2-binary==2.9.9
 alembic==1.13.2
+pytesseract
+opencv-python-headless
+Pillow
+numpy
+requests
+passlib[bcrypt]
+python-jose
+firebase-admin

@@ -2,6 +2,16 @@
 
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Handle Google OAuth2 redirect with token in URL
+    if (window.location.pathname.endsWith('auth.html')) {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (token) {
+            localStorage.setItem('ccp_token', token);
+            window.location.href = 'dashboard.html';
+            return;
+        }
+    }
     // Initialize based on current page
     const currentPage = window.location.pathname.split('/').pop();
     
@@ -44,14 +54,7 @@ function initGlobalFeatures() {
         });
     });
     
-    // Add loading states to buttons
-    document.querySelectorAll('button[type="submit"]').forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (this.form && this.form.checkValidity()) {
-                addLoadingState(this);
-            }
-        });
-    });
+    // Removed global auto-loading state on submit buttons; handled within page-specific submit handlers
 }
 
 // Make the navbar brand (logo + name) a link to the home page across pages
@@ -189,55 +192,192 @@ function initAuthPage() {
     // Tab switching (safe if only signin exists)
     const signinFormEl = document.getElementById('signin-form');
     const signupFormEl = document.getElementById('signup-form');
+    function setActiveForm(target) {
+        const isSignin = target === 'signin';
+        if (signinFormEl) {
+            signinFormEl.classList.toggle('active', isSignin);
+            signinFormEl.querySelectorAll('input').forEach(inp => {
+                if (isSignin) {
+                    inp.removeAttribute('disabled');
+                } else {
+                    inp.setAttribute('disabled', 'disabled');
+                }
+            });
+        }
+        if (signupFormEl) {
+            signupFormEl.classList.toggle('active', !isSignin);
+            signupFormEl.querySelectorAll('input').forEach(inp => {
+                if (!isSignin) {
+                    inp.removeAttribute('disabled');
+                } else {
+                    inp.setAttribute('disabled', 'disabled');
+                }
+            });
+        }
+        if (isSignin) {
+            authTitle && (authTitle.textContent = 'Welcome Back');
+            authSubtitle && (authSubtitle.textContent = 'Sign in to your CompliCopilot account');
+            authContainer && authContainer.classList.remove('glow-strong');
+        } else {
+            authTitle && (authTitle.textContent = 'Create Account');
+            authSubtitle && (authSubtitle.textContent = 'Join thousands of small businesses');
+            authContainer && authContainer.classList.add('glow-strong');
+        }
+    }
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const targetTab = button.getAttribute('data-tab');
             tabButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
-            formContents.forEach(c => c.classList.remove('active'));
-            if (targetTab === 'signin' && signinFormEl) {
-                signinFormEl.classList.add('active');
-                authTitle && (authTitle.textContent = 'Welcome Back');
-                authSubtitle && (authSubtitle.textContent = 'Sign in to your CompliCopilot account');
-                authContainer && authContainer.classList.remove('glow-strong');
-            } else if (targetTab === 'signup' && signupFormEl) {
-                signupFormEl.classList.add('active');
-                authTitle && (authTitle.textContent = 'Create Account');
-                authSubtitle && (authSubtitle.textContent = 'Join thousands of small businesses');
-                authContainer && authContainer.classList.add('glow-strong');
-            }
+            setActiveForm(targetTab);
         });
     });
+    // On page load, ensure only active form has required fields
+    // Initialize forms: disable the inactive (signup initially)
+    if (signinFormEl && signupFormEl) {
+        setActiveForm('signin');
+    }
 
-    // Form submission
+    // Google login button - DISABLED: Using Firebase Auth instead
+    // const googleBtn = document.querySelector('.btn-social.google');
+    // if (googleBtn) {
+    //     googleBtn.addEventListener('click', function(e) {
+    //         e.preventDefault();
+    //         window.location.href = 'http://localhost:8000/auth/google/login';
+    //     });
+    // }
+    
+    console.log("Note: Google OAuth handled by auth-google.js with Firebase Auth");
+    
+    // Form submission for Sign In and Sign Up
     if (authForm) {
-        authForm.addEventListener('submit', function(e) {
+        authForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            console.log('Form submitted!'); // Debug log
             const submitButton = this.querySelector('button[type="submit"]');
+            // In case a global click handler added a loading state pre-emptively, clear it now
+            removeLoadingState(submitButton);
+
+            // Determine which form is active
+            const isSignup = document.getElementById('signup-form').classList.contains('active');
+            console.log('Is signup form:', isSignup); // Debug log
+            
+            // Frontend validation
+            if (isSignup) {
+                console.log('Validating signup form...'); // Debug log
+                const email = document.getElementById('signup-email').value.trim();
+                const password = document.getElementById('signup-password').value;
+                const confirmPassword = document.getElementById('signup-confirm').value;
+                const fullName = document.getElementById('signup-name').value.trim();
+                const termsAccepted = document.querySelector('input[name="terms"]').checked;
+                
+                console.log('Form values:', { email, password, confirmPassword, fullName, termsAccepted }); // Debug log
+                
+                // Validate required fields
+                if (!email || !password || !confirmPassword || !fullName) {
+                    console.log('Required fields validation failed'); // Debug log
+                    showNotification('Validation Error', 'Please fill in all required fields', 'error');
+                    return;
+                }
+                
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    console.log('Email validation failed'); // Debug log
+                    showNotification('Validation Error', 'Please enter a valid email address', 'error');
+                    return;
+                }
+                
+                // Validate password match
+                if (password !== confirmPassword) {
+                    console.log('Password match validation failed'); // Debug log
+                    showNotification('Validation Error', 'Passwords do not match', 'error');
+                    return;
+                }
+                
+                // Validate password strength
+                if (password.length < 6) {
+                    console.log('Password strength validation failed'); // Debug log
+                    showNotification('Validation Error', 'Password must be at least 6 characters long', 'error');
+                    return;
+                }
+                
+                // Validate terms acceptance
+                if (!termsAccepted) {
+                    console.log('Terms validation failed'); // Debug log
+                    showNotification('Validation Error', 'Please accept the Terms of Service', 'error');
+                    return;
+                }
+                
+                console.log('All validations passed!'); // Debug log
+            } else {
+                // Sign in validation
+                const email = document.getElementById('signin-email').value.trim();
+                const password = document.getElementById('signin-password').value;
+                
+                if (!email || !password) {
+                    showNotification('Validation Error', 'Please enter both email and password', 'error');
+                    return;
+                }
+            }
+            
             addLoadingState(submitButton);
             if (authOverlay) authOverlay.classList.add('active');
 
-            setTimeout(() => {
+            const url = isSignup
+                ? 'http://localhost:8000/auth/signup'
+                : 'http://localhost:8000/auth/signin';
+            let payload = {};
+            if (isSignup) {
+                payload = {
+                    email: document.getElementById('signup-email').value.trim(),
+                    password: document.getElementById('signup-password').value,
+                    full_name: document.getElementById('signup-name').value.trim()
+                };
+            } else {
+                payload = {
+                    email: document.getElementById('signin-email').value.trim(),
+                    password: document.getElementById('signin-password').value
+                };
+            }
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
                 removeLoadingState(submitButton);
                 if (authOverlay) authOverlay.classList.remove('active');
-                showNotification('Success!', 'Signed in successfully', 'success');
-                // optional stub user
-                const user = { name: 'Admin', email: 'admin@complicopilot.dev', role: 'admin' };
-                localStorage.setItem('ccp_user', JSON.stringify(user));
-                setTimeout(() => window.location.href = 'dashboard.html', 800);
-            }, 1200);
+                if (!res.ok) {
+                    const msg = typeof data?.detail === 'string' ? data.detail : (data?.detail?.message || 'Authentication failed');
+                    showNotification('Error', msg, 'error');
+                    return;
+                }
+                if (isSignup) {
+                    showNotification('Success!', 'Account created. Please sign in.', 'success');
+                    setTimeout(() => window.location.reload(), 800);
+                } else {
+                    showNotification('Success!', 'Signed in successfully', 'success');
+                    if (data.access_token) {
+                        localStorage.setItem('ccp_token', data.access_token);
+                    }
+                    setTimeout(() => window.location.href = 'dashboard.html', 800);
+                }
+            } catch (err) {
+                removeLoadingState(submitButton);
+                if (authOverlay) authOverlay.classList.remove('active');
+                showNotification('Error', 'Network error: ' + err.message, 'error');
+            }
         });
     }
-
-    // Dev admin shortcut
+    // Remove dev admin shortcut in production
     const devBtn = document.getElementById('dev-admin-btn');
     if (devBtn) {
-        devBtn.addEventListener('click', () => {
-            const user = { name: 'Admin', email: 'admin@complicopilot.dev', role: 'admin' };
-            localStorage.setItem('ccp_user', JSON.stringify(user));
-            showNotification('Signed in', 'Developer admin session started', 'success');
-            setTimeout(() => window.location.href = 'dashboard.html', 600);
-        });
+        devBtn.style.display = 'none';
     }
 }
 
@@ -433,124 +573,278 @@ function initUploadPage() {
     const successStep = document.getElementById('success-step');
     const reviewForm = document.getElementById('review-form');
     
-    // File upload functionality
+    // File upload functionality (multi-file)
+    let processedReceipts = [];
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadProgressText = document.getElementById('upload-progress-text');
+    let exportCsvBtn = null;
+
     if (dropZone && fileInput) {
         // Click to upload
         dropZone.addEventListener('click', () => {
             fileInput.click();
         });
-        
+
         // Drag and drop
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('dragover');
         });
-        
+
         dropZone.addEventListener('dragleave', () => {
             dropZone.classList.remove('dragover');
         });
-        
+
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                handleFileUpload(files[0]);
+                handleMultipleFileUpload(files);
             }
         });
-        
+
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleFileUpload(e.target.files[0]);
+                handleMultipleFileUpload(e.target.files);
             }
         });
+    }
+
+    // Export to CSV button handler
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', function() {
+            if (processedReceipts.length > 0) {
+                generateAndDownloadBatchCSV(processedReceipts);
+            }
+        });
+    }
+
+    // Multi-file upload handler
+    async function handleMultipleFileUpload(fileList) {
+        const token = localStorage.getItem('ccp_token');
+        if (!token) {
+            alert('You are not logged in. Please log in to upload files.');
+            return;
+        }
+        processedReceipts = [];
+        if (uploadProgress) uploadProgress.style.display = '';
+        // Remove export button if present
+        if (exportCsvBtn && exportCsvBtn.parentNode) {
+            exportCsvBtn.parentNode.removeChild(exportCsvBtn);
+            exportCsvBtn = null;
+        }
+        if (uploadProgressText) uploadProgressText.textContent = 'Uploading...';
+
+        showStep('processing');
+        updateProgressStep(2);
+
+        const files = Array.from(fileList);
+        let processedCount = 0;
+        for (let i = 0; i < files.length; i++) {
+            if (uploadProgressText) uploadProgressText.textContent = `Uploading and processing file ${i+1} of ${files.length}...`;
+            try {
+                const receipt = await handleFileUpload(files[i], true); // true = batch mode
+                if (receipt) processedReceipts.push(receipt);
+            } catch (err) {
+                console.error('Error processing file:', files[i].name, err);
+            }
+            processedCount++;
+        }
+
+        if (uploadProgressText) uploadProgressText.textContent = `Processed ${processedCount} of ${files.length} files.`;
+        if (uploadProgress) uploadProgress.style.display = 'none';
+        // Dynamically add Export to CSV button after upload
+        if (!exportCsvBtn && processedReceipts.length > 0) {
+            exportCsvBtn = document.createElement('button');
+            exportCsvBtn.id = 'export-csv-btn';
+            exportCsvBtn.className = 'btn-primary';
+            exportCsvBtn.textContent = 'Export All to CSV';
+            exportCsvBtn.style.marginTop = '2em';
+            exportCsvBtn.addEventListener('click', function() {
+                if (processedReceipts.length > 0) {
+                    generateAndDownloadBatchCSV(processedReceipts);
+                }
+            });
+            // Insert after drop zone
+            const dropZone = document.getElementById('drop-zone');
+            if (dropZone && dropZone.parentNode) {
+                dropZone.parentNode.insertBefore(exportCsvBtn, dropZone.nextSibling);
+            }
+        }
+
+        // Optionally, show a summary or move to review step for the first file
+        if (processedReceipts.length > 0) {
+            // Show preview for the first file
+            loadReceiptPreview(files[0], processedReceipts[0]);
+            setTimeout(() => {
+                showStep('review');
+                updateProgressStep(3);
+                populateReviewFields(processedReceipts[0]);
+            }, 1000);
+        } else {
+            showStep('upload');
+            updateProgressStep(1);
+        }
     }
     
     // Form submission for review
     if (reviewForm) {
         reviewForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const submitButton = this.querySelector('button[type="submit"]');
             addLoadingState(submitButton);
-            
-            // Simulate saving then redirect to dashboard with updated data
-            setTimeout(() => {
+            // Collect review data
+            const reviewedData = {
+                vendor: (document.getElementById('vendor-name')?.value || '').trim() || 'Unknown Vendor',
+                date: document.getElementById('receipt-date')?.value || new Date().toISOString().slice(0,10),
+                amount: parseFloat(document.getElementById('total-amount')?.value || '0') || 0,
+                category: document.getElementById('expense-category')?.value || 'uncategorized',
+                gstin: document.getElementById('gst-number')?.value || '',
+                tax_amount: document.getElementById('tax-amount')?.value || ''
+            };
+            const receiptId = window._ccp_uploaded_receipt?.id || window._ccp_uploaded_receipt?._id;
+            if (!receiptId) {
+                showNotification('Error', 'No receipt ID found for update', 'error');
                 removeLoadingState(submitButton);
-                // Collect review data
-                const newReceipt = {
-                    id: String(Date.now()),
-                    vendor: (document.getElementById('vendor-name')?.value || '').trim() || 'Unknown Vendor',
-                    date: document.getElementById('receipt-date')?.value || new Date().toISOString().slice(0,10),
-                    amount: parseFloat(document.getElementById('total-amount')?.value || '0') || 0,
-                    category: document.getElementById('expense-category')?.value || 'uncategorized',
-                    status: 'approved',
-                    gstin: document.getElementById('gst-number')?.value || '',
-                    filename: 'uploaded-' + (document.getElementById('file-input')?.files?.[0]?.name || 'receipt')
-                };
-                const existing = JSON.parse(localStorage.getItem('ccp_new_receipts') || '[]');
-                existing.unshift(newReceipt);
-                localStorage.setItem('ccp_new_receipts', JSON.stringify(existing));
-                // Navigate back to dashboard
-                window.location.href = 'dashboard.html';
-            }, 1200);
+                return;
+            }
+            fetch(`http://localhost:8000/api/v1/receipts/${receiptId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('ccp_token')}`
+                },
+                body: JSON.stringify(reviewedData)
+            })
+            .then(res => res.json().then(data => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                removeLoadingState(submitButton);
+                if (!ok) {
+                    showNotification('Update Failed', data.detail?.message || 'Error updating receipt', 'error');
+                    return;
+                }
+                showNotification('Receipt Saved', 'Receipt has been reviewed and saved!', 'success');
+                
+                // Generate and download CSV
+                generateAndDownloadCSV(reviewedData, data);
+                
+                // Redirect to dashboard after a short delay
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
+            })
+            .catch(err => {
+                removeLoadingState(submitButton);
+                showNotification('Network Error', 'Could not update receipt', 'error');
+            });
         });
     }
     
     // File upload handler
-    function handleFileUpload(file) {
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        if (!validTypes.includes(file.type)) {
-            showNotification('Invalid File', 'Please upload a JPG, PNG, or PDF file', 'error');
+    // Single file upload handler (used by batch and single)
+    async function handleFileUpload(file, batchMode = false) {
+        const token = localStorage.getItem('ccp_token');
+        if (!token) {
+            alert('You are not logged in. Please log in to upload files.');
             return;
         }
-        
-        // Validate file size (10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            showNotification('File Too Large', 'Please upload a file smaller than 10MB', 'error');
-            return;
+
+        if (!batchMode) {
+            showStep('processing');
+            updateProgressStep(2);
+            if (uploadProgress) uploadProgress.style.display = '';
+            if (uploadProgressText) uploadProgressText.textContent = 'Uploading...';
         }
-        
-        // Show processing step
-        showStep('processing');
-        updateProgressStep(2);
-        
-        // Simulate file processing
-        simulateProcessing(file);
-    }
-    
-    // Simulate AI processing
-    function simulateProcessing(file) {
-        const processSteps = document.querySelectorAll('.process-item');
-        let currentStep = 0;
-        const processInterval = setInterval(() => {
-            if (currentStep < processSteps.length) {
-                const step = processSteps[currentStep];
-                step.classList.add('active');
-                const icon = step.querySelector('.process-icon');
-                if (icon) {
-                    if (currentStep === 0) icon.textContent = '✓';
-                    else icon.textContent = '⟳';
-                }
-                currentStep++;
-            } else {
-                clearInterval(processInterval);
-                processSteps.forEach((s, i) => {
-                    const icon = s.querySelector('.process-icon');
-                    if (icon) icon.textContent = '✓';
-                    s.classList.add('active');
-                });
-                // Load preview and move to review
-                loadReceiptPreview(file);
-                showStep('review');
-                updateProgressStep(3);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+        try {
+            const response = await fetch('http://localhost:8000/api/v1/receipts/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
             }
-        }, 700);
+
+            const result = await response.json();
+            console.log('Upload successful:', result);
+
+            if (!batchMode) {
+                // Store the receipt data for the review step
+                localStorage.setItem('current_receipt', JSON.stringify(result));
+                window._ccp_uploaded_receipt = result; // Also store globally for the form handler
+                // Show preview with backend data
+                loadReceiptPreview(file, result);
+                // Move to review step after a brief delay
+                setTimeout(() => {
+                    showStep('review');
+                    updateProgressStep(3);
+                    populateReviewFields(result);
+                }, 1000);
+                if (uploadProgress) uploadProgress.style.display = 'none';
+            }
+            return result;
+        } catch (error) {
+            console.error('Error during file upload:', error);
+            if (!batchMode) {
+                alert(`File upload failed: ${error.message}`);
+                // Go back to upload step on error
+                showStep('upload');
+                updateProgressStep(1);
+                if (uploadProgress) uploadProgress.style.display = 'none';
+            }
+            return null;
+        }
+    // Generate and download CSV for all processed receipts
+    function generateAndDownloadBatchCSV(receipts) {
+        if (!receipts || receipts.length === 0) return;
+        // Prepare CSV data
+        const headers = [
+            'Receipt ID', 'Date', 'Vendor Name', 'Total Amount', 'Currency', 'Category', 'GST Number', 'Tax Amount', 'Status', 'Created At', 'Filename'
+        ];
+        const csvRows = [headers.join(',')];
+        receipts.forEach(savedData => {
+            const row = [
+                savedData.id || 'N/A',
+                savedData.date || '',
+                savedData.vendor || '',
+                savedData.amount || 0,
+                savedData.currency || 'INR',
+                savedData.category || 'uncategorized',
+                savedData.gstin || '',
+                savedData.tax_amount || '',
+                savedData.status || 'approved',
+                savedData.created_at || new Date().toISOString(),
+                savedData.filename || ''
+            ].map(value => {
+                const v = value?.toString() || '';
+                return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
+            });
+            csvRows.push(row.join(','));
+        });
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `receipts_batch_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showNotification('CSV Downloaded', 'All receipt data has been exported to CSV file', 'success');
     }
-    
-    function loadReceiptPreview(file) {
+    }
+
+    // Update loadReceiptPreview to accept backend data if needed
+    function loadReceiptPreview(file, backendData) {
         const previewImg = document.getElementById('receipt-preview');
         if (!previewImg) return;
         if (file && file.type && file.type.startsWith('image/')) {
@@ -560,16 +854,140 @@ function initUploadPage() {
         } else {
             previewImg.src = '../public/assets/img/logo.png';
         }
+        // Optionally update preview fields with backendData
     }
 
-    function showStep(stepName) {
-        const ids = ['upload','processing','review','success'];
-        ids.forEach(id => {
-            const el = document.getElementById(`${id}-step`);
-            if (!el) return;
-            el.classList.toggle('active', id === stepName);
-        });
+    // Populate review form fields with extracted data
+    function populateReviewFields(receiptData) {
+        console.log('Populating form fields with:', receiptData);
+        
+        // Map to correct field IDs from HTML
+        const vendorField = document.getElementById('vendor-name');
+        const dateField = document.getElementById('receipt-date');
+        const amountField = document.getElementById('total-amount');
+        const categoryField = document.getElementById('expense-category');
+        const gstinField = document.getElementById('gst-number');
+        const taxAmountField = document.getElementById('tax-amount');
+
+        // Clear and populate vendor name
+        if (vendorField) {
+            const vendor = receiptData.vendor || '';
+            // Clean up vendor name (remove special characters from OCR errors)
+            const cleanVendor = vendor.replace(/[|'"_\-~]+$/, '').trim();
+            vendorField.value = cleanVendor && cleanVendor !== 'a |' ? cleanVendor : '';
+            console.log('Set vendor:', cleanVendor);
+        }
+
+        // Populate date (convert to YYYY-MM-DD format for date input)
+        if (dateField && receiptData.date && receiptData.date !== '1970-01-01') {
+            let dateValue = receiptData.date;
+            // Convert MM/DD/YYYY to YYYY-MM-DD
+            if (dateValue.includes('/')) {
+                const parts = dateValue.split('/');
+                if (parts.length === 3) {
+                    // Handle both MM/DD/YYYY and DD/MM/YYYY
+                    if (parts[2].length === 4) {
+                        dateValue = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                    }
+                }
+            }
+            dateField.value = dateValue;
+            console.log('Set date:', dateValue);
+        }
+
+        // Populate amount
+        if (amountField && receiptData.amount && receiptData.amount > 0) {
+            amountField.value = receiptData.amount;
+            console.log('Set amount:', receiptData.amount);
+        }
+
+        // Set category
+        if (categoryField && receiptData.category) {
+            categoryField.value = receiptData.category;
+            console.log('Set category:', receiptData.category);
+        }
+
+        // Populate GSTIN
+        if (gstinField) {
+            gstinField.value = receiptData.gstin || '';
+            if (!receiptData.gstin) {
+                gstinField.placeholder = "Not found on receipt";
+                gstinField.classList.add('warning');
+            }
+        }
+
+        // Populate tax amount
+        if (taxAmountField && receiptData.tax_amount) {
+            taxAmountField.value = receiptData.tax_amount;
+            console.log('Set tax amount:', receiptData.tax_amount);
+        }
+
+        // Show extracted OCR text for debugging
+        console.log('OCR Text:', receiptData.extracted?.ocr_text);
     }
+
+    // Generate and download CSV for the approved receipt
+    function generateAndDownloadCSV(reviewedData, savedData) {
+        console.log('Generating CSV for:', reviewedData);
+        
+        // Prepare CSV data
+        const csvData = [{
+            'Receipt ID': savedData.id || 'N/A',
+            'Date': reviewedData.date || savedData.date || '',
+            'Vendor Name': reviewedData.vendor || savedData.vendor || '',
+            'Total Amount': reviewedData.amount || savedData.amount || 0,
+            'Currency': savedData.currency || 'INR',
+            'Category': reviewedData.category || savedData.category || 'uncategorized',
+            'GST Number': reviewedData.gstin || savedData.gstin || '',
+            'Tax Amount': reviewedData.tax_amount || savedData.tax_amount || '',
+            'Status': savedData.status || 'approved',
+            'Created At': savedData.created_at || new Date().toISOString(),
+            'Filename': savedData.filename || ''
+        }];
+
+        // Convert to CSV format
+        const headers = Object.keys(csvData[0]);
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => 
+                headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    // Escape quotes and wrap in quotes if contains comma
+                    return value.includes(',') || value.includes('"') 
+                        ? `"${value.replace(/"/g, '""')}"` 
+                        : value;
+                }).join(',')
+            )
+        ].join('\n');
+
+        // Create and download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `receipt_${savedData.id || Date.now()}_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('CSV downloaded successfully');
+        showNotification('CSV Downloaded', 'Receipt data has been exported to CSV file', 'success');
+    }
+
+    // Prefill review form with backend data
+    function prefillReviewForm(data) {
+        if (!data) return;
+        document.getElementById('vendor-name').value = data.vendor || data.extracted?.vendor || '';
+        document.getElementById('receipt-date').value = data.date || data.extracted?.date || '';
+        document.getElementById('total-amount').value = data.amount || data.extracted?.amount || '';
+        document.getElementById('expense-category').value = data.category || data.extracted?.category || '';
+        document.getElementById('gst-number').value = data.gstin || data.extracted?.gstin || '';
+        document.getElementById('tax-amount').value = data.tax_amount || data.extracted?.tax_amount || '';
+    }
+    // ...existing code...
 }
 
 // Global helper functions
@@ -599,6 +1017,21 @@ function uploadAnother() {
     }
     
     goBackToUpload();
+}
+
+
+// Show/hide upload/review/processing steps
+function showStep(step) {
+    const uploadStep = document.getElementById('upload-step');
+    const processingStep = document.getElementById('processing-step');
+    const reviewStep = document.getElementById('review-step');
+    if (!uploadStep || !processingStep || !reviewStep) return;
+    uploadStep.classList.remove('active');
+    processingStep.classList.remove('active');
+    reviewStep.classList.remove('active');
+    if (step === 'upload') uploadStep.classList.add('active');
+    else if (step === 'processing') processingStep.classList.add('active');
+    else if (step === 'review') reviewStep.classList.add('active');
 }
 
 function updateProgressStep(stepNumber) {

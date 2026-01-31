@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "public": true,
+  "builds": [],
+  "routes": [
+    { "src": "/(.*)", "dest": "/$1" }
+  ],
+  "outputDirectory": "frontend/public"
+}

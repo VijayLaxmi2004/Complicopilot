@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "CompliCopilot PWA static prototype",
   "scripts": {
-    "start": "npx http-server ./ -p 3000 -c-1"
+    "start": "npx http-server public -p 3000 -c-1"
   },
   "devDependencies": {
     "http": "^0.0.1-security",

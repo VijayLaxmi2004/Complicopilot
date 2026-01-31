@@ -13,6 +13,22 @@ from typing import Tuple, Optional
 from fastapi import UploadFile
 
 
+ALLOWED_MIME = {"image/jpeg", "image/png", "application/pdf"}
+MAX_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
+
+
+def validate_file(filename: str, mime_type: str, size: int) -> Tuple[bool, str]:
+    """
+    Basic file validation used before saving.
+    Returns (is_valid, reason_if_invalid).
+    """
+    if mime_type not in ALLOWED_MIME:
+        return False, f"Unsupported type: {mime_type}"
+    if size > MAX_SIZE_BYTES:
+        return False, "File too large (max 10MB)"
+    return True, ""
+
+
 async def save_file(file: UploadFile, receipt_id: str, upload_dir: str) -> Tuple[str, str, int]:
     """
     Save an uploaded file to the uploads directory.
@@ -35,21 +51,11 @@ async def save_file(file: UploadFile, receipt_id: str, upload_dir: str) -> Tuple
     )
 
 
-def validate_file(file: UploadFile) -> Optional[str]:
+# Phase 1.2: implement disk storage under UPLOAD_DIR
+def save_file(bytes_data: bytes, dest_path: str) -> None:
     """
-    Validate file type and size.
-    
-    Args:
-        file: The uploaded file
-        
-    Returns:
-        Error message if validation fails, None otherwise
+    Save file bytes to dest_path. To be implemented in Phase 1.2.
     """
-    # Validate mime type
-    allowed_mime_types = ["image/jpeg", "image/png", "application/pdf"]
-    if file.content_type not in allowed_mime_types:
-        return f"Unsupported file type: {file.content_type}. Please upload JPEG, PNG, or PDF."
-    
-    # File size validation will be added in Phase 1.3
-    
-    return None
+    # with open(dest_path, "wb") as f:
+    #     f.write(bytes_data)
+    raise NotImplementedError("Implement in Phase 1.2")

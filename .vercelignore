@@ -1,0 +1,5 @@
+# Ignore everything except the frontend/public directory for Vercel deployment
+*
+!frontend/
+!frontend/public/
+!frontend/public/**

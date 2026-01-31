@@ -1,45 +1,68 @@
+from typing import Dict, Any
 import os
-from typing import Optional, Dict, Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-# Load environment variables from .env file if present
+# Routers
+from api.health import router as health_router
+from api.receipts import router as receipts_router
+
+from api.auth import router as auth_router
+from models.entities import Base
+from database.session import engine
+
 load_dotenv()
 
-# Configuration with defaults
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql+psycopg2://user:password@db:5432/complicopilot")
-UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "/app/uploads" if os.path.exists("/app") else "./uploads")
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "info")
+APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://user:password@db:5432/complicopilot")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/app/uploads")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
-# Create FastAPI app
-app = FastAPI(title="CompliCopilot API", version="0.1.0")
+app = FastAPI(title="CompliCopilot API", version=APP_VERSION)
 
-# Add CORS middleware
+# CORS for local dev (tighten later)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:5500",
+        "http://127.0.0.1:5501",
+        "http://localhost:5500",
+        "http://localhost:5501",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000"
+    ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Store config for access in endpoints if needed
-app.state.config = {
+# Attach config (optional access as app.state.settings)
+app.state.settings = {
     "DATABASE_URL": DATABASE_URL,
     "UPLOAD_DIR": UPLOAD_DIR,
     "LOG_LEVEL": LOG_LEVEL,
+    "VERSION": APP_VERSION,
 }
 
-# Root health endpoint (legacy)
-@app.get("/")
-def root():
-    return {"status": "ok", "service": "backend", "version": "0.1.0"}
+# Ensure DB tables exist in local/dev (safe if already migrated)
+@app.on_event("startup")
+def _create_tables_if_missing() -> None:
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        # In production prefer Alembic migrations; swallow errors here to avoid masking real startup issues
+        pass
 
-# Import and include API routers
-from api.health import router as health_router
-from api.reciepts import router as receipts_router
+@app.get("/", tags=["root"])
+def root() -> Dict[str, Any]:
+    return {"status": "ok", "service": "backend", "version": APP_VERSION}
 
-# Include routers with their own prefixes (they include /api/v1/ already)
+# Include API routers (already prefixed internally)
 app.include_router(health_router)
 app.include_router(receipts_router)
+app.include_router(auth_router)
