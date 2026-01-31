@@ -45,6 +45,11 @@ class ReceiptBase(BaseModel):
     currency: Optional[str] = "INR"
     category: Optional[str] = None
     gstin: Optional[str] = None
+    invoice_number: Optional[str] = None
+    cgst: Optional[float] = None
+    sgst: Optional[float] = None
+    igst: Optional[float] = None
+    hsn_codes: Optional[List[str]] = None
     tax_amount: Optional[float] = None
     status: Optional[str] = Field(default="needs_review")
 

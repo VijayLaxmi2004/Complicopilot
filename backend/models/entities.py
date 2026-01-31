@@ -34,18 +34,23 @@ class Receipt(Base):
     id: Mapped[str] = mapped_column(
         String, primary_key=True, default=lambda: str(uuid.uuid4()))
     vendor: Mapped[str] = mapped_column(String, nullable=False)
-    date: Mapped[str] = mapped_column(String, nullable=False)  # ISO YYYY-MM-DD
+    date: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # ISO YYYY-MM-DD
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String, default="INR")
     category: Mapped[str] = mapped_column(
         String, nullable=False, default="uncategorized")
-    gstin: Mapped[str] = mapped_column(String, default="")
-    tax_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    gstin: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    invoice_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    cgst: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    sgst: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    igst: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    hsn_codes: Mapped[Optional[List[str]]] = mapped_column(JSON, nullable=True)
+    tax_amount: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(
         String, nullable=False, default="needs_review")
-    filename: Mapped[str | None] = mapped_column(String, nullable=True)
-    mime_type: Mapped[str | None] = mapped_column(String, nullable=True)
-    extracted: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    filename: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    mime_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    extracted: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 class ParserService:
     """
@@ -8,29 +8,42 @@ class ParserService:
 
     def extract_total(self, ocr_text: str) -> Optional[str]:
         """
-        Extract the total amount from the OCR text using regular expressions.
-        Supports INR (₹), numbers with commas, and variations in label.
+        Extract the total amount from the OCR text using a prioritized strategy.
         """
-        # More comprehensive patterns for amounts
-        total_patterns = [
-            r"(?i)(total|grand total|amount due|amount|net amount|final amount)\s*[:\-]?\s*[₹$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?)",
-            r"(?i)(total|grand total|amount due|amount|net amount|final amount)\s*[:\-]?\s*[₹$]?\s*([0-9]+(?:\.\d{2})?)",
-            r"[₹$]\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?)",  # Just currency symbol followed by number
-            r"([0-9]{1,3}(?:,[0-9]{3})*(?:\.\d{2})?)\s*[₹$]",  # Number followed by currency
-            r"([0-9]+\.\d{2})",  # Any decimal number (as fallback)
-        ]
+        candidates = []
         
-        for pattern in total_patterns:
-            matches = re.findall(pattern, ocr_text)
-            for match in matches:
-                amount = match[-1] if isinstance(match, tuple) else match
-                # Validate amount is reasonable (between 1 and 100000)
-                try:
-                    float_amount = float(amount.replace(',', ''))
-                    if 1 <= float_amount <= 100000:
-                        return amount
-                except ValueError:
-                    continue
+        # Priority 1: Find amounts on lines with a 'total' keyword.
+        total_keywords = ['total', 'grand total', 'amount due', 'net amount', 'final amount']
+        for line in ocr_text.splitlines():
+            if any(keyword in line.lower() for keyword in total_keywords):
+                matches = re.findall(r'([0-9,]+\.\d{2})', line)
+                for amount in matches:
+                    try:
+                        float_amount = float(amount.replace(',', ''))
+                        if 1 <= float_amount <= 100000:
+                            candidates.append(float_amount)
+                    except ValueError:
+                        continue
+        
+        if candidates:
+            # Return the largest valid amount from the 'total' lines.
+            return f"{max(candidates):.2f}"
+
+        # Priority 2 (Fallback): Find the largest amount anywhere on the receipt.
+        all_amounts = []
+        matches = re.findall(r'([0-9,]+\.\d{2})', ocr_text)
+        for amount in matches:
+            try:
+                float_amount = float(amount.replace(',', ''))
+                if 1 <= float_amount <= 100000:
+                    all_amounts.append(float_amount)
+            except ValueError:
+                continue
+        
+        if all_amounts:
+            # Return the overall largest valid amount.
+            return f"{max(all_amounts):.2f}"
+            
         return None
 
     def extract_date(self, ocr_text: str) -> Optional[str]:
@@ -95,15 +108,133 @@ class ParserService:
         
         return None
 
-    def parse(self, ocr_text: str) -> Dict[str, Optional[str]]:
+    def _is_valid_gstin(self, gstin: str) -> bool:
+        """
+        Validate a GSTIN using the checksum algorithm.
+        """
+        if len(gstin) != 15:
+            return False
+
+        chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        char_map = {char: i for i, char in enumerate(chars)}
+        
+        try:
+            input_digits = [char_map[char] for char in gstin[:-1]]
+        except KeyError:
+            return False # Invalid character in GSTIN
+
+        total = 0
+        for i, digit in enumerate(input_digits):
+            multiplier = (i % 2) + 1
+            product = digit * multiplier
+            quotient = product // 36
+            remainder = product % 36
+            total += quotient + remainder
+
+        final_remainder = total % 36
+        checksum_code = (36 - final_remainder) % 36
+        calculated_checksum_char = chars[checksum_code]
+
+        return gstin[14] == calculated_checksum_char
+
+    def extract_gstin(self, ocr_text: str) -> Optional[str]:
+        """
+        Extract and validate the GSTIN from the OCR text.
+        """
+        gstin_pattern = r'\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})\b'
+        labeled_pattern = r'(?i)(?:GSTIN|GST\s*No|GST\s*Number)\s*[:\-]?\s*' + gstin_pattern
+        
+        for pattern in [labeled_pattern, gstin_pattern]:
+            matches = re.findall(pattern, ocr_text)
+            for match in matches:
+                gstin = match if isinstance(match, str) else match[-1]
+                gstin_clean = re.sub(r'[\s-]', '', gstin).upper()
+                
+                if self._is_valid_gstin(gstin_clean):
+                    return gstin_clean
+        return None
+
+    def extract_tax_breakdown(self, ocr_text: str) -> Dict[str, Optional[str]]:
+        """
+        Extract CGST, SGST, and IGST amounts from the OCR text.
+        """
+        # Pattern to find tax type (CGST, SGST, IGST) and its corresponding amount.
+        # It looks for the tax label, followed by an optional percentage,
+        # and then captures the numeric amount.
+        tax_pattern = r"(?i)(CGST|SGST|IGST)\s*(?:@\s*[\d.]+%?)?\s*[:\-]?\s*[₹$]?\s*([0-9,]+\.\d{2})"
+        
+        matches = re.findall(tax_pattern, ocr_text)
+        
+        tax_data = {
+            "cgst": None,
+            "sgst": None,
+            "igst": None,
+        }
+
+        for tax_type, amount in matches:
+            tax_key = tax_type.lower()
+            if tax_key in tax_data:
+                # Store the first valid amount found for each tax type
+                if tax_data[tax_key] is None:
+                    tax_data[tax_key] = amount.replace(',', '')
+        
+        return tax_data
+
+    def extract_invoice_number(self, ocr_text: str) -> Optional[str]:
+        """
+        Extract the invoice number from the OCR text.
+        """
+        # Patterns to look for invoice number, bill number, etc.
+        # It captures an alphanumeric string that follows the label.
+        invoice_patterns = [
+            r"(?i)(?:Invoice\s*No|Inv\s*No|Bill\s*No|Receipt\s*#)\s*[:\-]?\s*([A-Za-z0-9/-]+)",
+        ]
+
+        for pattern in invoice_patterns:
+            match = re.search(pattern, ocr_text)
+            if match:
+                invoice_number = match.group(1).strip()
+                if 2 <= len(invoice_number) <= 30:
+                    return invoice_number
+        return None
+
+    def extract_hsn_codes(self, ocr_text: str) -> List[str]:
+        """
+        Extract HSN/SAC codes from the OCR text.
+        HSN/SAC codes are typically 4, 6, or 8 digits.
+        """
+        # This pattern looks for 4, 6, or 8 digit numbers that are likely HSN/SAC codes.
+        # It is a simple regex and may need refinement for complex layouts.
+        hsn_pattern = r"\b(\d{4}|\d{6}|\d{8})\b"
+        
+        # Using a set to avoid duplicate codes
+        found_codes = set()
+        
+        # Find all potential codes in the text
+        matches = re.findall(hsn_pattern, ocr_text)
+        
+        # Simple validation: avoid numbers that are clearly something else (e.g., years)
+        for code in matches:
+            if not (code.startswith('19') or code.startswith('20')):
+                found_codes.add(code)
+                
+        return list(found_codes)
+
+    def parse(self, ocr_text: str) -> Dict[str, any]:
         """
         Parse the OCR text to extract structured data.
         """
-        return {
+        parsed_data = {
             "total": self.extract_total(ocr_text),
             "date": self.extract_date(ocr_text),
             "vendor": self.extract_vendor(ocr_text),
+            "gstin": self.extract_gstin(ocr_text),
+            "invoice_number": self.extract_invoice_number(ocr_text),
+            "hsn_codes": self.extract_hsn_codes(ocr_text),
         }
+        tax_data = self.extract_tax_breakdown(ocr_text)
+        parsed_data.update(tax_data)
+        return parsed_data
 
 # Example usage
 if __name__ == "__main__":
