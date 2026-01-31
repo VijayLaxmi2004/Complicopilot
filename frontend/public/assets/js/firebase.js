@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBL8_6nVU2OCwvNRYWqbx4NzD3PgftnFUE",
-  authDomain: "complicopilot.firebaseapp.com",
+  authDomain: "complicopilot-864.firebaseapp.com",
   projectId: "complicopilot",
   storageBucket: "complicopilot.appspot.com",
   messagingSenderId: "314466368999",
