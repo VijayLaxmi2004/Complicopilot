@@ -28,3 +28,8 @@ Thumbs.db
 # VSCode
 .vscode/
 .vercel
+
+# Uploads - user uploaded files (don't push to git)
+uploads/
+backend/uploads/
+**/uploads/

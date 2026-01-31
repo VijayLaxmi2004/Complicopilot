@@ -767,6 +767,7 @@ function initUploadPage() {
         if (selectedFiles.length === 0) return;
 
         processedReceipts = [];
+        processedFiles = []; // Store files for thumbnails
         showStep('processing');
         updateProgressStep(2);
 
@@ -784,6 +785,7 @@ function initUploadPage() {
                 const receipt = await handleFileUpload(files[i], true);
                 if (receipt) {
                     processedReceipts.push(receipt);
+                    processedFiles.push(files[i]);
                     successCount++;
                 }
             } catch (err) {
@@ -799,15 +801,13 @@ function initUploadPage() {
         // Clear selected files
         selectedFiles = [];
 
-        // Add export button
+        // Show review for ALL receipts
         if (processedReceipts.length > 0) {
-            addExportButton();
-            loadReceiptPreview(files[0], processedReceipts[0]);
             setTimeout(() => {
                 showStep('review');
                 updateProgressStep(3);
-                populateReviewFields(processedReceipts[0]);
-            }, 1000);
+                renderAllReceiptsForReview(processedReceipts, processedFiles);
+            }, 500);
         } else {
             showStep('upload');
             updateProgressStep(1);
@@ -815,22 +815,242 @@ function initUploadPage() {
         }
     }
 
-    function addExportButton() {
-        if (exportCsvBtn && exportCsvBtn.parentNode) {
-            exportCsvBtn.parentNode.removeChild(exportCsvBtn);
-        }
-        exportCsvBtn = document.createElement('button');
-        exportCsvBtn.id = 'export-csv-btn';
-        exportCsvBtn.className = 'btn-primary';
-        exportCsvBtn.textContent = 'Export All to CSV';
-        exportCsvBtn.style.marginTop = '2em';
-        exportCsvBtn.addEventListener('click', () => {
-            if (processedReceipts.length > 0) {
-                generateAndDownloadBatchCSV(processedReceipts);
-            }
+    // Store processed files for thumbnails
+    let processedFiles = [];
+
+    // ==================== MULTI-RECEIPT REVIEW ====================
+
+    // Render all receipts for review
+    function renderAllReceiptsForReview(receipts, files) {
+        const reviewList = document.getElementById('receipts-review-list');
+        const receiptsCount = document.getElementById('receipts-count');
+        const exportAllBtn = document.getElementById('export-all-csv-btn');
+        const approveAllBtn = document.getElementById('approve-all-btn');
+
+        if (!reviewList) return;
+
+        // Update count
+        if (receiptsCount) receiptsCount.textContent = receipts.length;
+
+        // Clear and populate
+        reviewList.innerHTML = '';
+
+        receipts.forEach((receipt, index) => {
+            const file = files[index] || null;
+            const card = createReceiptReviewCard(receipt, file, index);
+            reviewList.appendChild(card);
         });
-        if (dropZone && dropZone.parentNode) {
-            dropZone.parentNode.insertBefore(exportCsvBtn, dropZone.nextSibling);
+
+        // Wire up global buttons
+        if (exportAllBtn) {
+            exportAllBtn.onclick = () => {
+                const editedReceipts = collectEditedReceipts();
+                generateAndDownloadBatchCSV(editedReceipts);
+            };
+        }
+
+        if (approveAllBtn) {
+            approveAllBtn.onclick = () => approveAllReceipts();
+        }
+    }
+
+    // Create individual receipt review card
+    function createReceiptReviewCard(receipt, file, index) {
+        const card = document.createElement('div');
+        card.className = 'receipt-review-card';
+        card.dataset.receiptId = receipt.id;
+        card.dataset.index = index;
+
+        // Clean vendor name
+        const cleanVendor = (receipt.vendor || 'Unknown')
+            .replace(/[|'"_\-~]+$/, '')
+            .replace(/^[^a-zA-Z0-9]+/, '')
+            .trim() || 'Unknown Vendor';
+
+        // Format date for input
+        let dateValue = receipt.date || '';
+        if (dateValue.includes('/')) {
+            const parts = dateValue.split('/');
+            if (parts.length === 3 && parts[2].length === 4) {
+                dateValue = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+            }
+        }
+
+        card.innerHTML = `
+            <div class="card-header">
+                <img class="card-thumbnail" src="" alt="Receipt" data-file-index="${index}">
+                <div class="card-title">
+                    <div class="filename">${escapeHtml(receipt.filename || 'Receipt')}</div>
+                    <div class="receipt-id">${receipt.id.substring(0, 8)}...</div>
+                </div>
+                <span class="card-status needs-review">Needs Review</span>
+                <button class="card-remove-btn" title="Remove receipt" data-index="${index}">×</button>
+            </div>
+            <div class="card-fields">
+                <div class="card-field">
+                    <label>Vendor</label>
+                    <input type="text" class="field-vendor" value="${escapeHtml(cleanVendor)}" placeholder="Vendor name">
+                </div>
+                <div class="card-field">
+                    <label>Date</label>
+                    <input type="date" class="field-date" value="${dateValue}">
+                </div>
+                <div class="card-field">
+                    <label>Amount</label>
+                    <input type="number" class="field-amount" value="${receipt.amount || 0}" step="0.01" min="0">
+                </div>
+                <div class="card-field">
+                    <label>Category</label>
+                    <select class="field-category">
+                        <option value="uncategorized" ${receipt.category === 'uncategorized' ? 'selected' : ''}>📦 Uncategorized</option>
+                        <option value="meals" ${receipt.category === 'meals' ? 'selected' : ''}>🍽️ Meals</option>
+                        <option value="transport" ${receipt.category === 'transport' ? 'selected' : ''}>🚗 Transport</option>
+                        <option value="office" ${receipt.category === 'office' ? 'selected' : ''}>🏢 Office</option>
+                        <option value="software" ${receipt.category === 'software' ? 'selected' : ''}>💻 Software</option>
+                        <option value="fuel" ${receipt.category === 'fuel' ? 'selected' : ''}>⛽ Fuel</option>
+                        <option value="other" ${receipt.category === 'other' ? 'selected' : ''}>📋 Other</option>
+                    </select>
+                </div>
+                <div class="card-field">
+                    <label>GSTIN</label>
+                    <input type="text" class="field-gstin ${!receipt.gstin ? 'warning' : ''}" value="${escapeHtml(receipt.gstin || '')}" placeholder="Not detected">
+                </div>
+            </div>
+        `;
+
+        // Load thumbnail from file
+        const thumbnailImg = card.querySelector('.card-thumbnail');
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => { thumbnailImg.src = e.target.result; };
+            reader.readAsDataURL(file);
+        } else {
+            thumbnailImg.src = 'assets/img/logo.png';
+        }
+
+        // Remove button handler
+        const removeBtn = card.querySelector('.card-remove-btn');
+        removeBtn.addEventListener('click', () => {
+            removeReceiptFromReview(index);
+        });
+
+        return card;
+    }
+
+    // Remove receipt from review
+    function removeReceiptFromReview(index) {
+        processedReceipts.splice(index, 1);
+        processedFiles.splice(index, 1);
+
+        if (processedReceipts.length === 0) {
+            showStep('upload');
+            updateProgressStep(1);
+            updatePreviewGrid();
+            showNotification('All Removed', 'No receipts left to review', 'info');
+        } else {
+            renderAllReceiptsForReview(processedReceipts, processedFiles);
+        }
+    }
+
+    // Collect edited data from all cards
+    function collectEditedReceipts() {
+        const cards = document.querySelectorAll('.receipt-review-card');
+        const edited = [];
+
+        cards.forEach((card, index) => {
+            const original = processedReceipts[index];
+            if (!original) return;
+
+            edited.push({
+                id: original.id,
+                vendor: card.querySelector('.field-vendor')?.value || original.vendor,
+                date: card.querySelector('.field-date')?.value || original.date,
+                amount: parseFloat(card.querySelector('.field-amount')?.value) || original.amount,
+                category: card.querySelector('.field-category')?.value || original.category,
+                gstin: card.querySelector('.field-gstin')?.value || original.gstin,
+                currency: original.currency || 'INR',
+                filename: original.filename,
+                status: 'approved'
+            });
+        });
+
+        return edited;
+    }
+
+    // Approve all receipts and save to backend
+    async function approveAllReceipts() {
+        const editedReceipts = collectEditedReceipts();
+        if (editedReceipts.length === 0) {
+            showNotification('No Receipts', 'No receipts to approve', 'error');
+            return;
+        }
+
+        const approveBtn = document.getElementById('approve-all-btn');
+        if (approveBtn) {
+            addLoadingState(approveBtn);
+        }
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const receipt of editedReceipts) {
+            const card = document.querySelector(`.receipt-review-card[data-receipt-id="${receipt.id}"]`);
+
+            try {
+                if (card) card.classList.add('saving');
+
+                const response = await fetch(`http://localhost:8000/api/v1/receipts/${receipt.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vendor: receipt.vendor,
+                        date: receipt.date,
+                        amount: receipt.amount,
+                        category: receipt.category,
+                        gstin: receipt.gstin,
+                        status: 'approved'
+                    })
+                });
+
+                if (response.ok) {
+                    successCount++;
+                    if (card) {
+                        card.classList.remove('saving');
+                        card.classList.add('saved');
+                        const statusEl = card.querySelector('.card-status');
+                        if (statusEl) {
+                            statusEl.textContent = 'Approved';
+                            statusEl.className = 'card-status approved';
+                        }
+                    }
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (err) {
+                errorCount++;
+                console.error('Error saving receipt:', receipt.id, err);
+                if (card) {
+                    card.classList.remove('saving');
+                    card.classList.add('error');
+                }
+            }
+        }
+
+        if (approveBtn) {
+            removeLoadingState(approveBtn);
+        }
+
+        // Show results
+        if (errorCount === 0) {
+            showNotification('Success!', `All ${successCount} receipts approved and saved`, 'success');
+            // Export CSV automatically
+            generateAndDownloadBatchCSV(editedReceipts);
+            // Redirect to dashboard after delay
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 2000);
+        } else {
+            showNotification('Partial Success', `${successCount} saved, ${errorCount} failed`, 'warning');
         }
     }
 
@@ -1090,18 +1310,15 @@ function initUploadPage() {
             console.log('Upload successful:', result);
 
             if (!batchMode) {
-                // Store the receipt data for the review step
-                localStorage.setItem('current_receipt', JSON.stringify(result));
-                window._ccp_uploaded_receipt = result; // Also store globally for the form handler
-                // Show preview with backend data
-                loadReceiptPreview(file, result);
-                // Move to review step after a brief delay
+                // Single file upload - use the same multi-receipt review UI
+                processedReceipts = [result];
+                processedFiles = [file];
+                if (uploadProgress) uploadProgress.style.display = 'none';
                 setTimeout(() => {
                     showStep('review');
                     updateProgressStep(3);
-                    populateReviewFields(result);
-                }, 1000);
-                if (uploadProgress) uploadProgress.style.display = 'none';
+                    renderAllReceiptsForReview(processedReceipts, processedFiles);
+                }, 500);
             }
             return result;
         } catch (error) {
@@ -1115,6 +1332,8 @@ function initUploadPage() {
             }
             return null;
         }
+    }
+
     // Generate and download CSV for all processed receipts
     function generateAndDownloadBatchCSV(receipts) {
         if (!receipts || receipts.length === 0) return;
@@ -1153,7 +1372,6 @@ function initUploadPage() {
         link.click();
         document.body.removeChild(link);
         showNotification('CSV Downloaded', 'All receipt data has been exported to CSV file', 'success');
-    }
     }
 
     // Update loadReceiptPreview to accept backend data if needed
@@ -1314,11 +1532,17 @@ function toggleUserMenu() {
 function goBackToUpload() {
     const uploadStep = document.getElementById('upload-step');
     const reviewStep = document.getElementById('review-step');
-    
+    const filePreviewGrid = document.getElementById('file-preview-grid');
+    const dropZone = document.getElementById('drop-zone');
+
     if (uploadStep && reviewStep) {
         uploadStep.classList.add('active');
         reviewStep.classList.remove('active');
         updateProgressStep(1);
+
+        // Reset state - show drop zone, hide preview grid
+        if (filePreviewGrid) filePreviewGrid.style.display = 'none';
+        if (dropZone) dropZone.style.display = '';
     }
 }
 

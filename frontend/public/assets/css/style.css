@@ -2105,3 +2105,264 @@ select:-webkit-autofill {
         width: 100%;
     }
 }
+
+/* ==================== MULTI-RECEIPT REVIEW ==================== */
+
+/* Review Header */
+.review-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.review-header h1 {
+    font-size: var(--font-size-2xl);
+    margin-bottom: var(--spacing-xs);
+}
+
+.review-summary {
+    margin-top: var(--spacing-md);
+}
+
+.summary-count {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-md);
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--radius-xl);
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+/* Receipts Review List - 2 column grid */
+.receipts-review-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    max-height: 65vh;
+    overflow-y: auto;
+    padding: var(--spacing-xs);
+}
+
+/* Individual Receipt Review Card */
+.receipt-review-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.receipt-review-card:hover {
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow);
+}
+
+.receipt-review-card.saving {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.receipt-review-card.saved {
+    border-color: var(--success);
+}
+
+.receipt-review-card.error {
+    border-color: var(--error);
+}
+
+/* Card Header with thumbnail and filename */
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+}
+
+.card-thumbnail {
+    width: 50px;
+    height: 50px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: var(--bg-primary);
+}
+
+.card-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.card-title .filename {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-title .receipt-id {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+.card-status {
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.card-status.needs-review {
+    background: rgba(255, 170, 0, 0.2);
+    color: var(--warning);
+}
+
+.card-status.approved {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--success);
+}
+
+.card-remove-btn {
+    width: 28px;
+    height: 28px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.card-remove-btn:hover {
+    background: var(--error);
+    border-color: var(--error);
+    color: white;
+}
+
+/* Card Fields - Editable inline */
+.card-fields {
+    padding: var(--spacing-md);
+    display: grid;
+    gap: var(--spacing-sm);
+}
+
+.card-field {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.card-field label {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.card-field input,
+.card-field select {
+    padding: 8px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    transition: var(--transition);
+}
+
+.card-field input:focus,
+.card-field select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.card-field input.warning {
+    border-color: var(--warning);
+    background: rgba(255, 170, 0, 0.05);
+}
+
+/* Card Footer with per-receipt actions */
+.card-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    border-top: 1px solid var(--border);
+    background: var(--bg-tertiary);
+}
+
+.card-footer .btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Global Actions at bottom */
+.review-global-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    position: sticky;
+    bottom: 0;
+}
+
+.review-global-actions .action-group {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* Saving overlay for cards */
+.card-saving-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+}
+
+.card-saving-overlay .spinner {
+    width: 30px;
+    height: 30px;
+}
+
+/* Mobile responsive review */
+@media (max-width: 900px) {
+    .receipts-review-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .card-field {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    .card-field label {
+        font-size: 11px;
+    }
+
+    .review-global-actions {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+
+    .review-global-actions .action-group {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .review-global-actions .action-group button {
+        width: 100%;
+    }
+}
