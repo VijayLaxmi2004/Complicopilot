@@ -382,7 +382,7 @@ function initAuthPage() {
 }
 
 // Dashboard Initialization
-function initDashboard() {
+async function initDashboard() {
     // Existing avatar dropdown
     const userAvatar = document.querySelector('.user-avatar');
     const userDropdown = document.getElementById('user-dropdown');
@@ -395,30 +395,26 @@ function initDashboard() {
         });
     }
 
-    // Build store from current rows
     const tbody = document.getElementById('receipts-tbody') || document.querySelector('.table-body');
-    const toData = () => {
-        const rows = Array.from((tbody || document).querySelectorAll('.transaction-row'));
-        return rows.map((row, i) => ({
-            id: row.dataset.id || String(i+1),
-            vendor: row.querySelector('.vendor-name')?.textContent.trim() || '',
-            date: row.dataset.date || row.querySelector('.col-date')?.textContent.trim() || '',
-            amount: parseFloat(row.dataset.amount || (row.querySelector('.col-amount')?.textContent.replace(/[^\d.]/g,'') || '0')),
-            category: row.dataset.category || row.querySelector('.category-tag')?.className.split(' ').pop() || '',
-            status: row.dataset.status || row.querySelector('.status-text')?.textContent.trim().toLowerCase() || '',
-            gstin: row.dataset.gstin || '',
-            filename: row.dataset.filename || ''
-        }));
-    };
-    // Hydrate from localStorage any saved receipts from upload
-    const saved = JSON.parse(localStorage.getItem('ccp_new_receipts') || '[]');
-    const store = {
-        all: toData().concat(saved),
+    const countEl = document.getElementById('results-count');
+    let store = {
+        all: [],
         filtered: [],
         filters: { gstin: '' }
     };
 
-    const countEl = document.getElementById('results-count');
+    // Fetch receipts from the API
+    try {
+        const receiptData = await fetchReceipts();
+        store.all = receiptData.items;
+        applyFilters();
+    } catch (error) {
+        console.error('Failed to fetch receipts:', error);
+        showNotification('Error', 'Could not load recent transactions.', 'error');
+        // Render an empty state or an error message in the table
+        if(tbody) tbody.innerHTML = `<div class="empty-state"><p>Could not load transactions. Please try again later.</p></div>`;
+    }
+
 
     function applyFilters() {
         const q = (store.filters.gstin || '').replace(/\s+/g,'').toLowerCase();
@@ -432,6 +428,10 @@ function initDashboard() {
     function renderTable(data) {
         if (!tbody) return;
         tbody.innerHTML = '';
+        if (data.length === 0) {
+            tbody.innerHTML = `<div class="empty-state"><p>No transactions found.</p></div>`;
+            return;
+        }
         data.forEach(item => {
             const row = document.createElement('div');
             row.className = 'transaction-row';
@@ -442,19 +442,27 @@ function initDashboard() {
             row.dataset.amount = String(item.amount);
             row.dataset.gstin = item.gstin || '';
             row.dataset.filename = item.filename || '';
+
+            const statusText = (item.status || 'needs review').replace(/_/g, ' ');
+            const statusClass = statusText.replace(/\s/g, '-');
+            const categoryText = (item.category || 'uncategorized');
+            const date = new Date(item.created_at);
+            const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+
             row.innerHTML = `
                 <div class="col-vendor">
                     <div class="vendor-info">
                         <div class="vendor-name">${item.vendor}</div>
-                        <div class="vendor-detail">${item.category ? item.category.charAt(0).toUpperCase()+item.category.slice(1) : ''}</div>
+                        <div class="vendor-detail">${item.filename}</div>
                     </div>
                 </div>
-                <div class="col-date">${item.date}</div>
+                <div class="col-date">${formattedDate}</div>
                 <div class="col-amount">₹${item.amount.toLocaleString()}</div>
-                <div class="col-category"><span class="category-tag ${item.category || 'uncategorized'}">${item.category || 'Uncategorized'}</span></div>
+                <div class="col-category"><span class="category-tag ${categoryText}">${categoryText}</span></div>
                 <div class="col-status">
-                    <span class="status-dot ${item.status.replace(' ','-')}"></span>
-                    <span class="status-text">${item.status.replace('-', ' ')}</span>
+                    <span class="status-dot ${statusClass}"></span>
+                    <span class="status-text">${statusText}</span>
                 </div>
             `;
             row.addEventListener('click', () => openDrawer(item));
@@ -560,8 +568,33 @@ function initDashboard() {
     });
 
     // Initial render
-    applyFilters();
+    // applyFilters();
 }
+
+async function fetchReceipts() {
+    // For now, authentication is disabled in the backend, so we don't need to send a token.
+    // When authentication is enabled, we would do something like this:
+    // const token = localStorage.getItem('ccp_token');
+    // if (!token) {
+    //     throw new Error('No authentication token found.');
+    // }
+
+    const response = await fetch('/api/v1/receipts/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            // 'Authorization': `Bearer ${token}` // Add this line when auth is ready
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail?.message || 'Failed to fetch receipts');
+    }
+
+    return await response.json();
+}
+
 
 // Upload Page Initialization
 function initUploadPage() {
