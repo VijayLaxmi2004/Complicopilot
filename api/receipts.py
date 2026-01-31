@@ -335,3 +335,28 @@ async def delete_receipt(
     db.delete(obj)
     db.commit()
     return None
+
+from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
+from services.report_generator import report_generator_service
+
+class ReportRequest(BaseModel):
+    text: str
+
+@router.post("/report", response_class=StreamingResponse)
+async def generate_report(
+    request: ReportRequest
+) -> StreamingResponse:
+    """
+    Generate a PDF report from OCR text.
+    """
+    try:
+        json_data = report_generator_service.generate_json_from_text(request.text)
+        if not json_data:
+            raise HTTPException(status_code=500, detail="Failed to generate JSON from text.")
+
+        pdf_bytes = report_generator_service.create_pdf_report(json_data)
+        
+        return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": "attachment;filename=report.pdf"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -5,7 +5,7 @@ pydantic[email]
 python-multipart==0.0.9
 python-dotenv==1.0.1
 SQLAlchemy==2.0.36
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.11
 alembic==1.13.2
 pytesseract
 opencv-python-headless
@@ -17,3 +17,5 @@ passlib[bcrypt]
 python-jose
 firebase-admin
 pandas
+google-generativeai
+fpdf2
