@@ -40,18 +40,24 @@ def error_response(code: str, message: str, details: Any = None) -> Dict[str, An
 async def create_receipts_batch(
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db)
-) -> Any:
+) -> Dict[str, Any]:
     """
-    Upload multiple receipt images, run OCR and parser, and return batch results as downloadable file.
+    Upload multiple receipt images, run OCR and parser, and return batch results as JSON.
+    Returns individual success/error status for each file.
     """
-    allowed_types = {"image/png", "image/jpeg", "image/jpg"}
+    allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
     max_size = 10 * 1024 * 1024  # 10 MB per file
+    max_files = 10  # Maximum files per batch
     parser = ParserService()
-    batch_results = []
-    file_paths = []
+    results = []
     errors = []
 
-    for file in files:
+    # Limit number of files
+    files_to_process = files[:max_files]
+    if len(files) > max_files:
+        errors.append({"error": f"Only first {max_files} files will be processed"})
+
+    for file in files_to_process:
         if not file or not file.filename:
             errors.append({"filename": None, "error": "No file uploaded"})
             continue
@@ -65,32 +71,74 @@ async def create_receipts_batch(
         except Exception:
             size = 0
         if size > max_size:
-            errors.append({"filename": file.filename, "error": "File too large"})
+            errors.append({"filename": file.filename, "error": "File too large (max 10MB)"})
             continue
+
+        # Save file
         file_path = UPLOADS_DIR / f"{uuid.uuid4()}_{file.filename}"
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        file_paths.append(str(file_path))
-
-    # Batch OCR processing
-    from services.ocr import ocr_service
-    extracted_texts = ocr_service.extract_texts_from_images(file_paths)
-
-    for idx, text in enumerate(extracted_texts):
         try:
-            parsed = parser.parse(text)
-        except Exception as e:
-            parsed = {"error": str(e)}
-        batch_results.append({
-            "filename": files[idx].filename,
-            "ocr_text": text,
-            "parsed": parsed
-        })
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
 
-    # Generate CSV file from batch results
-    from services.compliance import generate_csv_from_batch
-    csv_path = generate_csv_from_batch(batch_results)
-    return FileResponse(csv_path, filename="receipts_batch.csv", media_type="text/csv")
+            # OCR processing
+            text = ocr_service.extract_text_from_image(str(file_path))
+            parsed = parser.parse(text)
+
+            # Clean amount for database
+            amount_str = parsed.get("total") or "0"
+            amount_clean = amount_str.replace(",", "") if isinstance(amount_str, str) else amount_str
+
+            # Create receipt in database
+            receipt = Receipt(
+                id=str(uuid.uuid4()),
+                vendor=parsed.get("vendor", "Unknown"),
+                date=parsed.get("date", ""),
+                amount=float(amount_clean),
+                currency="INR",
+                category="uncategorized",
+                gstin=parsed.get("gstin", ""),
+                tax_amount=None,
+                status="needs_review",
+                filename=file.filename,
+                mime_type=file.content_type,
+                extracted=parsed
+            )
+
+            db.add(receipt)
+            db.commit()
+            db.refresh(receipt)
+
+            results.append({
+                "success": True,
+                "id": receipt.id,
+                "filename": file.filename,
+                "vendor": receipt.vendor,
+                "date": receipt.date,
+                "amount": receipt.amount,
+                "currency": receipt.currency,
+                "category": receipt.category,
+                "gstin": receipt.gstin,
+                "status": receipt.status,
+                "extracted": receipt.extracted or {}
+            })
+
+        except Exception as e:
+            # Clean up file on error
+            if file_path.exists():
+                file_path.unlink()
+            errors.append({
+                "success": False,
+                "filename": file.filename,
+                "error": str(e)
+            })
+
+    return {
+        "total": len(files_to_process),
+        "successful": len(results),
+        "failed": len([e for e in errors if "filename" in e]),
+        "results": results,
+        "errors": errors
+    }
 
 
 # Single file upload endpoint

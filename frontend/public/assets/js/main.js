@@ -572,17 +572,55 @@ function initUploadPage() {
     const reviewStep = document.getElementById('review-step');
     const successStep = document.getElementById('success-step');
     const reviewForm = document.getElementById('review-form');
-    
+
     // File upload functionality (multi-file)
     let processedReceipts = [];
+    let selectedFiles = []; // Track files before upload
     const uploadProgress = document.getElementById('upload-progress');
     const uploadProgressText = document.getElementById('upload-progress-text');
     let exportCsvBtn = null;
 
+    // New elements for preview grid
+    const filePreviewGrid = document.getElementById('file-preview-grid');
+    const previewCards = document.getElementById('preview-cards');
+    const fileCount = document.getElementById('file-count');
+    const chooseFilesBtn = document.getElementById('choose-files-btn');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    const addMoreBtn = document.getElementById('add-more-btn');
+    const processAllBtn = document.getElementById('process-all-btn');
+
+    // Camera elements
+    const cameraBtn = document.getElementById('camera-btn');
+    const cameraModal = document.getElementById('camera-modal');
+    const cameraCloseBtn = document.getElementById('camera-close-btn');
+    const cameraVideo = document.getElementById('camera-video');
+    const cameraCanvas = document.getElementById('camera-canvas');
+    const cameraPreview = document.getElementById('camera-preview');
+    const captureBtn = document.getElementById('capture-btn');
+    const retakeBtn = document.getElementById('retake-btn');
+    const usePhotoBtn = document.getElementById('use-photo-btn');
+    const switchCameraBtn = document.getElementById('switch-camera-btn');
+
+    let currentStream = null;
+    let facingMode = 'environment'; // Start with back camera
+    const MAX_FILES = 10;
+
     if (dropZone && fileInput) {
-        // Click to upload
-        dropZone.addEventListener('click', () => {
-            fileInput.click();
+        // Click to upload (only on choose files button or drop zone content)
+        if (chooseFilesBtn) {
+            chooseFilesBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+        }
+
+        dropZone.addEventListener('click', (e) => {
+            // Only trigger if clicking on drop zone itself, not buttons
+            if (e.target === dropZone || e.target.closest('.drop-zone-content')) {
+                if (!e.target.closest('button')) {
+                    fileInput.click();
+                }
+            }
         });
 
         // Drag and drop
@@ -600,83 +638,170 @@ function initUploadPage() {
             dropZone.classList.remove('dragover');
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                handleMultipleFileUpload(files);
+                addFilesToPreview(Array.from(files));
             }
         });
 
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleMultipleFileUpload(e.target.files);
+                addFilesToPreview(Array.from(e.target.files));
+                fileInput.value = ''; // Reset for re-selection
             }
         });
     }
 
-    // Export to CSV button handler
-    if (exportCsvBtn) {
-        exportCsvBtn.addEventListener('click', function() {
-            if (processedReceipts.length > 0) {
-                generateAndDownloadBatchCSV(processedReceipts);
+    // Add more files button
+    if (addMoreBtn) {
+        addMoreBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+    }
+
+    // Clear all files
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', () => {
+            selectedFiles = [];
+            updatePreviewGrid();
+        });
+    }
+
+    // Process all files
+    if (processAllBtn) {
+        processAllBtn.addEventListener('click', () => {
+            if (selectedFiles.length > 0) {
+                processSelectedFiles();
             }
         });
     }
 
-    // Multi-file upload handler
-    async function handleMultipleFileUpload(fileList) {
-        // AUTHENTICATION DISABLED FOR DEVELOPMENT
-        // const token = localStorage.getItem('ccp_token');
-        // if (!token) {
-        //     alert('You are not logged in. Please log in to upload files.');
-        //     return;
-        // }
-        processedReceipts = [];
-        if (uploadProgress) uploadProgress.style.display = '';
-        // Remove export button if present
-        if (exportCsvBtn && exportCsvBtn.parentNode) {
-            exportCsvBtn.parentNode.removeChild(exportCsvBtn);
-            exportCsvBtn = null;
+    // Add files to preview (instead of immediate upload)
+    function addFilesToPreview(newFiles) {
+        // Filter valid files
+        const validFiles = newFiles.filter(file => {
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (!validTypes.includes(file.type)) {
+                showNotification('Invalid File', `${file.name} is not a supported file type`, 'error');
+                return false;
+            }
+            if (file.size > maxSize) {
+                showNotification('File Too Large', `${file.name} exceeds 10MB limit`, 'error');
+                return false;
+            }
+            return true;
+        });
+
+        // Check max files limit
+        const totalFiles = selectedFiles.length + validFiles.length;
+        if (totalFiles > MAX_FILES) {
+            showNotification('Limit Reached', `Maximum ${MAX_FILES} files allowed. Only adding ${MAX_FILES - selectedFiles.length} files.`, 'warning');
+            validFiles.splice(MAX_FILES - selectedFiles.length);
         }
-        if (uploadProgressText) uploadProgressText.textContent = 'Uploading...';
 
+        selectedFiles = selectedFiles.concat(validFiles);
+        updatePreviewGrid();
+    }
+
+    // Update the preview grid UI
+    function updatePreviewGrid() {
+        if (!previewCards || !filePreviewGrid) return;
+
+        if (selectedFiles.length === 0) {
+            filePreviewGrid.style.display = 'none';
+            dropZone.style.display = '';
+            return;
+        }
+
+        filePreviewGrid.style.display = 'block';
+        dropZone.style.display = 'none';
+        fileCount.textContent = selectedFiles.length;
+        previewCards.innerHTML = '';
+
+        selectedFiles.forEach((file, index) => {
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+            card.dataset.index = index;
+
+            // Create thumbnail
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.alt = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+                card.appendChild(img);
+            } else {
+                // PDF placeholder
+                const placeholder = document.createElement('div');
+                placeholder.className = 'pdf-placeholder';
+                placeholder.innerHTML = '📄';
+                placeholder.style.cssText = 'height:100px;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--bg-primary);';
+                card.appendChild(placeholder);
+            }
+
+            // File name
+            const fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = file.name;
+            fileName.title = file.name;
+            card.appendChild(fileName);
+
+            // Remove button
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-btn';
+            removeBtn.innerHTML = '×';
+            removeBtn.title = 'Remove file';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedFiles.splice(index, 1);
+                updatePreviewGrid();
+            });
+            card.appendChild(removeBtn);
+
+            previewCards.appendChild(card);
+        });
+    }
+
+    // Process selected files (batch upload)
+    async function processSelectedFiles() {
+        if (selectedFiles.length === 0) return;
+
+        processedReceipts = [];
         showStep('processing');
         updateProgressStep(2);
 
-        const files = Array.from(fileList);
-        let processedCount = 0;
+        if (uploadProgress) uploadProgress.style.display = '';
+
+        const files = [...selectedFiles];
+        let successCount = 0;
+
         for (let i = 0; i < files.length; i++) {
-            if (uploadProgressText) uploadProgressText.textContent = `Uploading and processing file ${i+1} of ${files.length}...`;
+            if (uploadProgressText) {
+                uploadProgressText.textContent = `Processing file ${i + 1} of ${files.length}: ${files[i].name}`;
+            }
+
             try {
-                const receipt = await handleFileUpload(files[i], true); // true = batch mode
-                if (receipt) processedReceipts.push(receipt);
+                const receipt = await handleFileUpload(files[i], true);
+                if (receipt) {
+                    processedReceipts.push(receipt);
+                    successCount++;
+                }
             } catch (err) {
                 console.error('Error processing file:', files[i].name, err);
             }
-            processedCount++;
         }
 
-        if (uploadProgressText) uploadProgressText.textContent = `Processed ${processedCount} of ${files.length} files.`;
+        if (uploadProgressText) {
+            uploadProgressText.textContent = `Processed ${successCount} of ${files.length} files.`;
+        }
         if (uploadProgress) uploadProgress.style.display = 'none';
-        // Dynamically add Export to CSV button after upload
-        if (!exportCsvBtn && processedReceipts.length > 0) {
-            exportCsvBtn = document.createElement('button');
-            exportCsvBtn.id = 'export-csv-btn';
-            exportCsvBtn.className = 'btn-primary';
-            exportCsvBtn.textContent = 'Export All to CSV';
-            exportCsvBtn.style.marginTop = '2em';
-            exportCsvBtn.addEventListener('click', function() {
-                if (processedReceipts.length > 0) {
-                    generateAndDownloadBatchCSV(processedReceipts);
-                }
-            });
-            // Insert after drop zone
-            const dropZone = document.getElementById('drop-zone');
-            if (dropZone && dropZone.parentNode) {
-                dropZone.parentNode.insertBefore(exportCsvBtn, dropZone.nextSibling);
-            }
-        }
 
-        // Optionally, show a summary or move to review step for the first file
+        // Clear selected files
+        selectedFiles = [];
+
+        // Add export button
         if (processedReceipts.length > 0) {
-            // Show preview for the first file
+            addExportButton();
             loadReceiptPreview(files[0], processedReceipts[0]);
             setTimeout(() => {
                 showStep('review');
@@ -686,7 +811,193 @@ function initUploadPage() {
         } else {
             showStep('upload');
             updateProgressStep(1);
+            updatePreviewGrid();
         }
+    }
+
+    function addExportButton() {
+        if (exportCsvBtn && exportCsvBtn.parentNode) {
+            exportCsvBtn.parentNode.removeChild(exportCsvBtn);
+        }
+        exportCsvBtn = document.createElement('button');
+        exportCsvBtn.id = 'export-csv-btn';
+        exportCsvBtn.className = 'btn-primary';
+        exportCsvBtn.textContent = 'Export All to CSV';
+        exportCsvBtn.style.marginTop = '2em';
+        exportCsvBtn.addEventListener('click', () => {
+            if (processedReceipts.length > 0) {
+                generateAndDownloadBatchCSV(processedReceipts);
+            }
+        });
+        if (dropZone && dropZone.parentNode) {
+            dropZone.parentNode.insertBefore(exportCsvBtn, dropZone.nextSibling);
+        }
+    }
+
+    // ==================== CAMERA FUNCTIONALITY ====================
+    if (cameraBtn) {
+        cameraBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openCamera();
+        });
+    }
+
+    if (cameraCloseBtn) {
+        cameraCloseBtn.addEventListener('click', closeCamera);
+    }
+
+    if (cameraModal) {
+        cameraModal.addEventListener('click', (e) => {
+            if (e.target === cameraModal) closeCamera();
+        });
+    }
+
+    if (switchCameraBtn) {
+        switchCameraBtn.addEventListener('click', switchCamera);
+    }
+
+    if (captureBtn) {
+        captureBtn.addEventListener('click', capturePhoto);
+    }
+
+    if (retakeBtn) {
+        retakeBtn.addEventListener('click', retakePhoto);
+    }
+
+    if (usePhotoBtn) {
+        usePhotoBtn.addEventListener('click', usePhoto);
+    }
+
+    async function openCamera() {
+        if (!cameraModal) return;
+        cameraModal.classList.add('active');
+
+        try {
+            await startCamera();
+        } catch (err) {
+            console.error('Camera error:', err);
+            showCameraError(err.message || 'Could not access camera');
+        }
+    }
+
+    async function startCamera() {
+        // Stop any existing stream
+        stopCamera();
+
+        const constraints = {
+            video: {
+                facingMode: facingMode,
+                width: { ideal: 1280 },
+                height: { ideal: 960 }
+            },
+            audio: false
+        };
+
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            if (cameraVideo) {
+                cameraVideo.srcObject = currentStream;
+                cameraVideo.style.display = 'block';
+            }
+            if (cameraPreview) cameraPreview.style.display = 'none';
+            showCaptureMode();
+        } catch (err) {
+            // Try without facingMode constraint (desktop fallback)
+            if (facingMode === 'environment') {
+                facingMode = 'user';
+                return startCamera();
+            }
+            throw err;
+        }
+    }
+
+    function stopCamera() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+    }
+
+    function closeCamera() {
+        stopCamera();
+        if (cameraModal) cameraModal.classList.remove('active');
+        showCaptureMode();
+    }
+
+    async function switchCamera() {
+        facingMode = facingMode === 'environment' ? 'user' : 'environment';
+        try {
+            await startCamera();
+        } catch (err) {
+            showNotification('Camera Error', 'Could not switch camera', 'error');
+        }
+    }
+
+    function capturePhoto() {
+        if (!cameraVideo || !cameraCanvas || !cameraPreview) return;
+
+        const context = cameraCanvas.getContext('2d');
+        cameraCanvas.width = cameraVideo.videoWidth;
+        cameraCanvas.height = cameraVideo.videoHeight;
+        context.drawImage(cameraVideo, 0, 0);
+
+        const dataUrl = cameraCanvas.toDataURL('image/jpeg', 0.9);
+        cameraPreview.src = dataUrl;
+        cameraPreview.style.display = 'block';
+        cameraVideo.style.display = 'none';
+
+        showPreviewMode();
+    }
+
+    function retakePhoto() {
+        if (cameraVideo) cameraVideo.style.display = 'block';
+        if (cameraPreview) cameraPreview.style.display = 'none';
+        showCaptureMode();
+    }
+
+    function usePhoto() {
+        if (!cameraCanvas) return;
+
+        // Convert canvas to blob and add as file
+        cameraCanvas.toBlob((blob) => {
+            const fileName = `receipt_${Date.now()}.jpg`;
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+            addFilesToPreview([file]);
+            closeCamera();
+            showNotification('Photo Added', 'Receipt photo has been added to the queue', 'success');
+        }, 'image/jpeg', 0.9);
+    }
+
+    function showCaptureMode() {
+        if (captureBtn) captureBtn.style.display = '';
+        if (switchCameraBtn) switchCameraBtn.style.display = '';
+        if (retakeBtn) retakeBtn.style.display = 'none';
+        if (usePhotoBtn) usePhotoBtn.style.display = 'none';
+    }
+
+    function showPreviewMode() {
+        if (captureBtn) captureBtn.style.display = 'none';
+        if (switchCameraBtn) switchCameraBtn.style.display = 'none';
+        if (retakeBtn) retakeBtn.style.display = '';
+        if (usePhotoBtn) usePhotoBtn.style.display = '';
+    }
+
+    function showCameraError(message) {
+        const cameraBody = document.querySelector('.camera-body');
+        if (cameraBody) {
+            cameraBody.innerHTML = `
+                <div class="camera-error">
+                    <h4>Camera Access Denied</h4>
+                    <p>${message}</p>
+                    <p>Please allow camera access in your browser settings and try again.</p>
+                </div>
+            `;
+        }
+    }
+
+    // ==================== LEGACY: Direct upload (for backward compatibility) ====================
+    async function handleMultipleFileUpload(fileList) {
+        addFilesToPreview(Array.from(fileList));
     }
     
     // Form submission for review

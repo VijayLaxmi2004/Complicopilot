@@ -62,16 +62,35 @@
                                 <h3>Drag & Drop or Click to Upload</h3>
                                 <p>Supports JPG, PNG, PDF files up to 10MB each. You can select multiple files.</p>
                             </div>
-                            <button class="btn-primary">Choose Files</button>
+                            <div class="upload-buttons">
+                                <button class="btn-primary" id="choose-files-btn">Choose Files</button>
+                                <button class="btn-secondary" id="camera-btn">
+                                    <span class="camera-icon">📷</span> Use Camera
+                                </button>
+                            </div>
                         </div>
                         <input type="file" id="file-input" accept="image/*,.pdf" multiple hidden>
+                    </div>
+
+                    <!-- File Preview Grid -->
+                    <div class="file-preview-grid" id="file-preview-grid" style="display: none;">
+                        <div class="preview-header">
+                            <h3>Selected Files (<span id="file-count">0</span>)</h3>
+                            <button class="btn-secondary btn-small" id="clear-all-btn">Clear All</button>
+                        </div>
+                        <div class="preview-cards" id="preview-cards"></div>
+                        <div class="preview-actions">
+                            <button class="btn-secondary" id="add-more-btn">+ Add More</button>
+                            <button class="btn-primary glow" id="process-all-btn">Process All Receipts</button>
+                        </div>
+                    </div>
+
                     <!-- Upload progress/loading indicator -->
                     <div id="upload-progress" class="upload-progress" style="display:none; text-align:center; margin-top:1em;">
                         <div class="spinner" style="display:inline-block; vertical-align:middle;"></div>
                         <span id="upload-progress-text" style="margin-left:0.5em;">Uploading...</span>
                     </div>
                     <!-- Export to CSV button will be injected by JS after upload -->
-                    </div>
 
                     <div class="upload-tips">
                         <h4>Tips for best results:</h4>
@@ -247,6 +266,35 @@
             </section>
         </div>
     </main>
+
+    <!-- Camera Capture Modal -->
+    <div class="camera-modal" id="camera-modal">
+        <div class="camera-modal-content">
+            <div class="camera-header">
+                <h3>Capture Receipt</h3>
+                <button class="camera-close-btn" id="camera-close-btn">&times;</button>
+            </div>
+            <div class="camera-body">
+                <video id="camera-video" autoplay playsinline></video>
+                <canvas id="camera-canvas" style="display: none;"></canvas>
+                <img id="camera-preview" style="display: none;" alt="Captured photo">
+            </div>
+            <div class="camera-controls">
+                <button class="btn-secondary" id="switch-camera-btn">
+                    <span>🔄</span> Switch Camera
+                </button>
+                <button class="btn-primary capture-btn" id="capture-btn">
+                    <span>📸</span> Capture
+                </button>
+                <button class="btn-secondary" id="retake-btn" style="display: none;">
+                    <span>↩️</span> Retake
+                </button>
+                <button class="btn-primary" id="use-photo-btn" style="display: none;">
+                    <span>✓</span> Use Photo
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="assets/js/main.js"></script>
 </body>
