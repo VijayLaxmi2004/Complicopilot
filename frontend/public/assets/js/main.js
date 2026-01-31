@@ -942,6 +942,55 @@ function initUploadPage() {
             removeReceiptFromReview(index);
         });
 
+        // Add Generate Report button
+        const reportBtn = document.createElement('button');
+        reportBtn.className = 'btn-secondary btn-small';
+        reportBtn.textContent = 'Generate Report';
+        reportBtn.style.marginLeft = 'auto';
+        card.querySelector('.card-header').appendChild(reportBtn);
+
+        reportBtn.addEventListener('click', async () => {
+            const receipt = processedReceipts[index];
+            const ocrText = receipt?.extracted?.ocr_text;
+
+            if (!ocrText) {
+                showNotification('Error', 'No OCR text available for this receipt.', 'error');
+                return;
+            }
+
+            addLoadingState(reportBtn);
+
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/receipts/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: ocrText })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to generate report.');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `report-${receipt.id}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                showNotification('Success', 'Report downloaded successfully!', 'success');
+
+            } catch (error) {
+                console.error('Error generating report:', error);
+                showNotification('Error', `Could not generate report: ${error.message}`, 'error');
+            } finally {
+                removeLoadingState(reportBtn);
+            }
+        });
+
         return card;
     }
 
