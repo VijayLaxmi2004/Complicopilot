@@ -710,7 +710,7 @@ function initUploadPage() {
                 removeLoadingState(submitButton);
                 return;
             }
-            fetch(`http://localhost:8080/api/v1/receipts/${receiptId}`, {
+            fetch(`http://localhost:8000/api/v1/receipts/${receiptId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -763,7 +763,7 @@ function initUploadPage() {
     formData.append('file', file);
 
         try {
-            const response = await fetch('http://localhost:8080/api/v1/receipts/', {
+            const response = await fetch('http://localhost:8000/api/v1/receipts/', {
                 method: 'POST',
                 headers: {
                     // Authorization removed for development

@@ -133,11 +133,15 @@ async def create_receipt(
         parsed = parser.parse(text)
         
         # Create receipt in database
+        # Remove commas from amount (Indian number format: 1,170.00)
+        amount_str = parsed.get("total") or "0"
+        amount_clean = amount_str.replace(",", "") if isinstance(amount_str, str) else amount_str
+
         receipt = Receipt(
             id=str(uuid.uuid4()),
             vendor=parsed.get("vendor", "Unknown"),
             date=parsed.get("date", ""),
-            amount=float(parsed.get("total") or 0.0),
+            amount=float(amount_clean),
             currency=parsed.get("currency", "INR"),
             category=parsed.get("category", "uncategorized"),
             gstin=parsed.get("gstin", ""),

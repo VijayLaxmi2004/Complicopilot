@@ -151,13 +151,3 @@ def get_current_firebase_user(request: Request):
 @router.get("/users/me", response_model=schemas.UserOut)
 def read_users_me(current_user: entities.User = Depends(get_current_user)):
     return current_user
-
-from fastapi import APIRouter, Depends, Request
-from .auth import get_current_firebase_user
-
-router = APIRouter()
-
-@router.post("/api/v1/receipts/")
-def upload_receipt(request: Request, user=Depends(get_current_firebase_user)):
-    # user is the decoded Firebase user info
-    ...

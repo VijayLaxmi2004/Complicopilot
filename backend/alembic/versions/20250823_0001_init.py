@@ -32,8 +32,8 @@ def upgrade() -> None:
         sa.Column('filename', sa.String(), nullable=True),
         sa.Column('mime_type', sa.String(), nullable=True),
         sa.Column('extracted', sa.JSON(), nullable=True),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
     )
 
     op.create_table(
@@ -45,7 +45,7 @@ def upgrade() -> None:
         sa.Column('message', sa.String(), nullable=False),
         sa.Column('data', sa.JSON(), nullable=True),
         sa.Column('resolved', sa.Boolean(), server_default=sa.false()),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
     )
 
 

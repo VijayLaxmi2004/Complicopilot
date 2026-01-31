@@ -1,8 +1,27 @@
+from dotenv import load_dotenv
+load_dotenv()  # MUST be before database imports to load .env variables
+
+import logging
+import sys
 from typing import Dict, Any
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
+
+# Configure logging early
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger(__name__)
+
+# Log startup info
+logger.info("=" * 50)
+logger.info("CompliCopilot Backend Starting...")
+logger.info(f"DATABASE_URL configured: {bool(os.getenv('DATABASE_URL'))}")
+logger.info(f"UPLOAD_DIR: {os.getenv('UPLOAD_DIR', '/app/uploads')}")
+logger.info("=" * 50)
 
 # Routers
 from api.health import router as health_router
@@ -11,8 +30,6 @@ from api.receipts import router as receipts_router
 from api.auth import router as auth_router
 from models.entities import Base
 from database.session import engine
-
-load_dotenv()
 
 APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://user:password@db:5432/complicopilot")
@@ -52,11 +69,14 @@ app.state.settings = {
 # Ensure DB tables exist in local/dev (safe if already migrated)
 @app.on_event("startup")
 def _create_tables_if_missing() -> None:
+    logger.info("Startup event: Creating/verifying database tables...")
     try:
         Base.metadata.create_all(bind=engine)
-    except Exception:
-        # In production prefer Alembic migrations; swallow errors here to avoid masking real startup issues
-        pass
+        logger.info("Database tables created/verified successfully")
+        logger.info(f"Backend ready at version {APP_VERSION}")
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {e}")
+        raise  # Don't silently swallow - let it fail visibly
 
 @app.get("/", tags=["root"])
 def root() -> Dict[str, Any]:
