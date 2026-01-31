@@ -1,9 +1,17 @@
 {
   "version": 2,
   "public": true,
-  "builds": [],
-  "routes": [
-    { "src": "/(.*)", "dest": "/$1" }
+  "buildCommand": "",
+  "outputDirectory": "frontend/public",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
   ],
-  "outputDirectory": "frontend/public"
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
+  ]
 }

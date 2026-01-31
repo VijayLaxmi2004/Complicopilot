@@ -8,10 +8,11 @@
     function getApiBaseUrl() {
         const hostname = window.location.hostname;
         
-        // Production - Firebase Hosting (update this URL after deploying backend)
-        if (hostname.includes('complicopilot.web.app') || 
+        // Production - Vercel or Firebase Hosting
+        if (hostname.includes('vercel.app') || 
+            hostname.includes('complicopilot.web.app') || 
             hostname.includes('complicopilot.firebaseapp.com')) {
-            // TODO: Replace with your deployed backend URL (Render, Railway, Cloud Run, etc.)
+            // Backend deployed on Render
             return 'https://complicopilot-backend.onrender.com';
         }
         

@@ -397,41 +397,61 @@ async function initDashboard() {
 
     const tbody = document.getElementById('receipts-tbody') || document.querySelector('.table-body');
     const countEl = document.getElementById('results-count');
+    
+    // Store for holding state
     let store = {
         all: [],
         filtered: [],
         filters: { gstin: '' }
     };
 
-    // Fetch receipts from the API
+    // --- NEW LOGIC ---
+    // 1. Initially, the page shows the static data from the HTML.
+    // 2. We try to fetch live data.
+    // 3. If successful, we replace the static data.
+    // 4. If it fails, we do nothing, leaving the static data in place.
+
     try {
         const receiptData = await fetchReceipts();
+        // If fetch is successful, update the store and render the new data
         store.all = receiptData.items;
         applyFilters();
     } catch (error) {
-        console.error('Failed to fetch receipts:', error);
-        showNotification('Error', 'Could not load recent transactions.', 'error');
-        // Render an empty state or an error message in the table
-        if(tbody) tbody.innerHTML = `<div class="empty-state"><p>Could not load transactions. Please try again later.</p></div>`;
+        // If fetch fails, just log the error and leave the static stub data.
+        console.error('Failed to fetch receipts, showing static data:', error);
     }
+    // --- END NEW LOGIC ---
 
 
     function applyFilters() {
+        // If live data was fetched, filter it. Otherwise, this will be an empty array and render will show nothing.
         const q = (store.filters.gstin || '').replace(/\s+/g,'').toLowerCase();
         let data = [...store.all];
         if (q) data = data.filter(d => (d.gstin || '').replace(/\s+/g,'').toLowerCase().includes(q));
         store.filtered = data;
-        renderTable(data);
+
+        // Only re-render if there's actual data to render
+        if (store.all.length > 0) {
+            renderTable(data);
+        } else {
+             // If store is empty (fetch failed), we do nothing, keeping the stub data.
+             // We can, however, update the count based on the stub data if we want.
+             const staticRowCount = tbody.querySelectorAll('.transaction-row').length;
+             if (countEl) countEl.textContent = `${staticRowCount} result${staticRowCount===1?'':'s'}`;
+        }
+        
         if (countEl) countEl.textContent = `${data.length} result${data.length===1?'':'s'}`;
     }
 
     function renderTable(data) {
         if (!tbody) return;
-        tbody.innerHTML = '';
+        tbody.innerHTML = ''; // Clear existing (stub) data
+        
         if (data.length === 0) {
             tbody.innerHTML = `<div class="empty-state"><p>No transactions found.</p></div>`;
             return;
         }
+
         data.forEach(item => {
             const row = document.createElement('div');
             row.className = 'transaction-row';
@@ -454,7 +474,7 @@ async function initDashboard() {
                 <div class="col-vendor">
                     <div class="vendor-info">
                         <div class="vendor-name">${item.vendor}</div>
-                        <div class="vendor-detail">${item.filename}</div>
+                        <div class="vendor-detail">${item.filename || ''}</div>
                     </div>
                 </div>
                 <div class="col-date">${formattedDate}</div>
@@ -482,10 +502,11 @@ async function initDashboard() {
     });
 
     exportBtn && exportBtn.addEventListener('click', ()=>{
-        const rows = store.filtered.length ? store.filtered : store.all;
+        // Use live data if available, otherwise grab from static rows
+        const dataToExport = store.all.length > 0 ? (store.filtered.length > 0 ? store.filtered : store.all) : toData();
         const header = ['Vendor','Date','Amount','Category','Status','GSTIN'];
         const csv = [header.join(',')]
-            .concat(rows.map(r =>
+            .concat(dataToExport.map(r =>
                 `"${(r.vendor||'').replace(/"/g,'""')}",${r.date||''},${r.amount||0},"${r.category||''}",${r.status||''},"${r.gstin||''}"`
             ))
             .join('\n');
@@ -496,11 +517,27 @@ async function initDashboard() {
         a.click();
         URL.revokeObjectURL(a.href);
     });
+    
+    // Helper to read data from stub rows if needed
+    const toData = () => {
+        const rows = Array.from((tbody || document).querySelectorAll('.transaction-row'));
+        return rows.map((row, i) => ({
+            id: row.dataset.id || String(i+1),
+            vendor: row.querySelector('.vendor-name')?.textContent.trim() || '',
+            date: row.dataset.date || row.querySelector('.col-date')?.textContent.trim() || '',
+            amount: parseFloat(row.dataset.amount || (row.querySelector('.col-amount')?.textContent.replace(/[^\d.]/g,'') || '0')),
+            category: row.dataset.category || row.querySelector('.category-tag')?.className.split(' ').pop() || '',
+            status: row.dataset.status || row.querySelector('.status-text')?.textContent.trim().toLowerCase() || '',
+            gstin: row.dataset.gstin || '',
+            filename: row.dataset.filename || ''
+        }));
+    };
+
 
     // Generate Google Docs-style report (HTML .doc download)
     genReport && genReport.addEventListener('click', (e)=>{
         e.preventDefault();
-        const rows = store.filtered.length ? store.filtered : store.all;
+        const rows = store.all.length > 0 ? (store.filtered.length > 0 ? store.filtered : store.all) : toData();
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>CompliCopilot Report</title>
         <style>
             body{font-family:Arial,Helvetica,sans-serif;line-height:1.5;color:#111}
@@ -538,11 +575,11 @@ async function initDashboard() {
             </div>
             <div class="drawer-field">
                 <label>Date</label>
-                <input type="text" value="${item.date}">
+                <input type="text" value="${item.date || ''}">
             </div>
             <div class="drawer-field">
                 <label>Amount</label>
-                <input type="text" value="₹${item.amount.toLocaleString()}">
+                <input type="text" value="₹${(item.amount || 0).toLocaleString()}">
             </div>
             <div class="drawer-field">
                 <label>Category</label>
@@ -566,9 +603,6 @@ async function initDashboard() {
             drawer.setAttribute('aria-hidden','true');
         }
     });
-
-    // Initial render
-    // applyFilters();
 }
 
 async function fetchReceipts() {
@@ -579,7 +613,7 @@ async function fetchReceipts() {
     //     throw new Error('No authentication token found.');
     // }
 
-    const response = await fetch('/api/v1/receipts/', {
+    const response = await fetch(API_CONFIG.url(API_CONFIG.endpoints.receipts), {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -994,7 +1028,7 @@ function initUploadPage() {
             addLoadingState(reportBtn);
 
             try {
-                const response = await fetch('http://localhost:8000/api/v1/receipts/report', {
+                const response = await fetch(API_CONFIG.url('/api/v1/receipts/report'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: ocrText })
