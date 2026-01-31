@@ -4,7 +4,8 @@
 # text = svc.extract_text_from_image(receipt_image_path_or_bytes)
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status, Query, Body, Form
 from fastapi.responses import FileResponse
-from api.auth import get_current_firebase_user
+# AUTHENTICATION DISABLED FOR DEVELOPMENT
+# from api.auth import get_current_firebase_user
 from typing import Dict, List, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_, and_
@@ -38,8 +39,7 @@ def error_response(code: str, message: str, details: Any = None) -> Dict[str, An
 @router.post("/batch", status_code=status.HTTP_201_CREATED)
 async def create_receipts_batch(
     files: List[UploadFile] = File(...),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_firebase_user)
+    db: Session = Depends(get_db)
 ) -> Any:
     """
     Upload multiple receipt images, run OCR and parser, and return batch results as downloadable file.
@@ -92,6 +92,89 @@ async def create_receipts_batch(
     csv_path = generate_csv_from_batch(batch_results)
     return FileResponse(csv_path, filename="receipts_batch.csv", media_type="text/csv")
 
+
+# Single file upload endpoint
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_receipt(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Upload a single receipt image, run OCR and parser, and return the result.
+    """
+    allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+    max_size = 10 * 1024 * 1024  # 10 MB
+    
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail=error_response("MISSING_FILE", "No file uploaded"))
+    
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=415, detail=error_response("INVALID_TYPE", f"File type {file.content_type} not allowed"))
+    
+    # Check file size
+    file.file.seek(0, io.SEEK_END)
+    size = file.file.tell()
+    file.file.seek(0)
+    
+    if size > max_size:
+        raise HTTPException(status_code=413, detail=error_response("FILE_TOO_LARGE", "File size exceeds 10MB"))
+    
+    # Save file
+    file_path = UPLOADS_DIR / f"{uuid.uuid4()}_{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        # Run OCR
+        text = ocr_service.extract_text_from_image(str(file_path))
+        
+        # Parse the extracted text
+        parser = ParserService()
+        parsed = parser.parse(text)
+        
+        # Create receipt in database
+        receipt = Receipt(
+            id=str(uuid.uuid4()),
+            vendor=parsed.get("vendor", "Unknown"),
+            date=parsed.get("date", ""),
+            amount=float(parsed.get("total") or 0.0),
+            currency=parsed.get("currency", "INR"),
+            category=parsed.get("category", "uncategorized"),
+            gstin=parsed.get("gstin", ""),
+            tax_amount=parsed.get("tax_amount"),
+            status="needs_review",
+            filename=file.filename,
+            mime_type=file.content_type,
+            extracted=parsed
+        )
+        
+        db.add(receipt)
+        db.commit()
+        db.refresh(receipt)
+        
+        return {
+            "id": receipt.id,
+            "vendor": receipt.vendor,
+            "date": receipt.date,
+            "amount": receipt.amount,
+            "currency": receipt.currency,
+            "category": receipt.category,
+            "gstin": receipt.gstin,
+            "tax_amount": receipt.tax_amount,
+            "status": receipt.status,
+            "filename": receipt.filename,
+            "mime_type": receipt.mime_type,
+            "extracted": receipt.extracted or {},
+            "ocr_text": text
+        }
+    
+    except Exception as e:
+        # Clean up file on error
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=error_response("PROCESSING_ERROR", str(e)))
+
+
 @router.get("/")
 async def list_receipts(
     q: Optional[str] = None,
@@ -99,8 +182,7 @@ async def list_receipts(
     status: Optional[str] = None,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_firebase_user)
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """List receipts with optional filtering and pagination."""
     conditions = []
@@ -150,8 +232,7 @@ async def list_receipts(
 @router.get("/{id}")
 async def get_receipt(
     id: str,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_firebase_user)
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Get details for a specific receipt by ID."""
     obj = db.get(Receipt, id)
@@ -178,8 +259,7 @@ async def get_receipt(
 async def update_receipt(
     id: str,
     payload: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_firebase_user)
+    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Update a receipt with user-verified information."""
     obj = db.get(Receipt, id)
@@ -213,7 +293,10 @@ async def update_receipt(
     }
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_receipt(id: str, db: Session = Depends(get_db), current_user=Depends(get_current_firebase_user)) -> None:
+async def delete_receipt(
+    id: str, 
+    db: Session = Depends(get_db)
+) -> None:
     """Delete a receipt by ID."""
     obj = db.get(Receipt, id)
     if not obj:

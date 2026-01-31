@@ -622,11 +622,12 @@ function initUploadPage() {
 
     // Multi-file upload handler
     async function handleMultipleFileUpload(fileList) {
-        const token = localStorage.getItem('ccp_token');
-        if (!token) {
-            alert('You are not logged in. Please log in to upload files.');
-            return;
-        }
+        // AUTHENTICATION DISABLED FOR DEVELOPMENT
+        // const token = localStorage.getItem('ccp_token');
+        // if (!token) {
+        //     alert('You are not logged in. Please log in to upload files.');
+        //     return;
+        // }
         processedReceipts = [];
         if (uploadProgress) uploadProgress.style.display = '';
         // Remove export button if present
@@ -709,11 +710,11 @@ function initUploadPage() {
                 removeLoadingState(submitButton);
                 return;
             }
-            fetch(`http://localhost:8000/api/v1/receipts/${receiptId}`, {
+            fetch(`http://localhost:8080/api/v1/receipts/${receiptId}`, {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('ccp_token')}`
+                    'Content-Type': 'application/json'
+                    // Authorization removed for development
                 },
                 body: JSON.stringify(reviewedData)
             })
@@ -744,11 +745,12 @@ function initUploadPage() {
     // File upload handler
     // Single file upload handler (used by batch and single)
     async function handleFileUpload(file, batchMode = false) {
-        const token = localStorage.getItem('ccp_token');
-        if (!token) {
-            alert('You are not logged in. Please log in to upload files.');
-            return;
-        }
+        // AUTHENTICATION DISABLED FOR DEVELOPMENT
+        // const token = localStorage.getItem('ccp_token');
+        // if (!token) {
+        //     alert('You are not logged in. Please log in to upload files.');
+        //     return;
+        // }
 
         if (!batchMode) {
             showStep('processing');
@@ -761,10 +763,10 @@ function initUploadPage() {
     formData.append('file', file);
 
         try {
-            const response = await fetch('http://localhost:8000/api/v1/receipts/', {
+            const response = await fetch('http://localhost:8080/api/v1/receipts/', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    // Authorization removed for development
                 },
                 body: formData
             });

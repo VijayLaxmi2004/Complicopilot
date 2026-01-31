@@ -1,5 +1,6 @@
 import pandas as pd
 import tempfile
+from typing import List
 
 # Generate CSV from batch OCR/parsed data
 def generate_csv_from_batch(batch_results: List[dict]) -> str:
