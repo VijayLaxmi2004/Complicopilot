@@ -10,6 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import DeclarativeBase, relationship, Mapped, mapped_column
 from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Boolean, JSON
 from datetime import datetime
+from typing import Optional, List
 import uuid
 
 # Phase 1.2: define SQLAlchemy entities here (Receipts, ComplianceIssues, etc.)

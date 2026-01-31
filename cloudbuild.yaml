@@ -1,0 +1,39 @@
+# Cloud Build configuration for CompliCopilot Backend
+# This file automates the build and deploy process to Cloud Run
+
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/complicopilot-backend', './backend']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/complicopilot-backend']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'complicopilot-backend'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/complicopilot-backend'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--set-env-vars'
+      - 'DATABASE_URL=${_DATABASE_URL},TESSERACT_CMD=/usr/bin/tesseract'
+
+images:
+  - 'gcr.io/$PROJECT_ID/complicopilot-backend'
+
+substitutions:
+  _DATABASE_URL: 'sqlite:///./complicopilot.db'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

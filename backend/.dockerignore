@@ -1,0 +1,18 @@
+# Ignore these files when building Cloud Run container
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.env
+.pytest_cache
+alembic/versions/__pycache__
+tests/__pycache__
+uploads/
+*.db
+*.sqlite

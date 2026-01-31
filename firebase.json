@@ -7,8 +7,23 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|jpg|jpeg|gif|png|svg|webp|woff|woff2)",
+        "headers": [
+          { "key": "Cache-Control", "value": "max-age=31536000" }
+        ]
+      }
+    ],
     "rewrites": [
       { "source": "/__/auth/handler", "destination": "/index.html" },
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "complicopilot-backend",
+          "region": "us-central1"
+        }
+      },
       { "source": "**", "destination": "/index.html" }
     ]
   }
