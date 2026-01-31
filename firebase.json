@@ -1,6 +1,5 @@
 {
   "hosting": {
-    "site": "complicopilot-864",
     "public": "frontend/public",
     "ignore": [
       "firebase.json",
@@ -15,16 +14,7 @@
         ]
       }
     ],
-    "rewrites": [
-      { "source": "/__/auth/handler", "destination": "/index.html" },
-      {
-        "source": "/api/**",
-        "run": {
-          "serviceId": "complicopilot-backend",
-          "region": "us-central1"
-        }
-      },
-      { "source": "**", "destination": "/index.html" }
-    ]
+    "cleanUrls": true,
+    "trailingSlash": false
   }
 }

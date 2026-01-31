@@ -1,0 +1,27 @@
+# Render Blueprint for CompliCopilot Backend
+# Deploy using: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: complicopilot-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: oregon
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./complicopilot.db
+      - key: TESSERACT_CMD
+        value: /usr/bin/tesseract
+      - key: CORS_ORIGINS
+        value: https://hackforge-2005.web.app,https://hackforge-2005.firebaseapp.com,http://localhost:3000,http://localhost:5500
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+databases:
+  - name: complicopilot-db
+    plan: free
+    databaseName: complicopilot
+    user: complicopilot

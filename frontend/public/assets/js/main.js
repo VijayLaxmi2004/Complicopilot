@@ -325,8 +325,8 @@ function initAuthPage() {
             if (authOverlay) authOverlay.classList.add('active');
 
             const url = isSignup
-                ? 'http://localhost:8000/auth/signup'
-                : 'http://localhost:8000/auth/signin';
+                ? API_CONFIG.url(API_CONFIG.endpoints.auth.signup)
+                : API_CONFIG.url(API_CONFIG.endpoints.auth.signin);
             let payload = {};
             if (isSignup) {
                 payload = {
@@ -1007,7 +1007,7 @@ function initUploadPage() {
             try {
                 if (card) card.classList.add('saving');
 
-                const response = await fetch(`http://localhost:8000/api/v1/receipts/${receipt.id}`, {
+                const response = await fetch(API_CONFIG.url(API_CONFIG.endpoints.receipt(receipt.id)), {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1249,7 +1249,7 @@ function initUploadPage() {
                 removeLoadingState(submitButton);
                 return;
             }
-            fetch(`http://localhost:8000/api/v1/receipts/${receiptId}`, {
+            fetch(API_CONFIG.url(API_CONFIG.endpoints.receipt(receiptId)), {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1302,7 +1302,7 @@ function initUploadPage() {
     formData.append('file', file);
 
         try {
-            const response = await fetch('http://localhost:8000/api/v1/receipts/', {
+            const response = await fetch(API_CONFIG.url(API_CONFIG.endpoints.receipts), {
                 method: 'POST',
                 headers: {
                     // Authorization removed for development

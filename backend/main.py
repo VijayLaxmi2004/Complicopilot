@@ -38,21 +38,30 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
 app = FastAPI(title="CompliCopilot API", version=APP_VERSION)
 
-# CORS for local dev (tighten later)
+# Build CORS origins from environment or default
+default_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:5501",
+    "http://localhost:5500",
+    "http://localhost:5501",
+    "http://127.0.0.1:8080",
+    "http://localhost:8080"
+]
+
+# Add production origins from environment variable
+cors_env = os.getenv("CORS_ORIGINS", "")
+if cors_env:
+    extra_origins = [o.strip() for o in cors_env.split(",") if o.strip()]
+    default_origins.extend(extra_origins)
+    logger.info(f"Added CORS origins from env: {extra_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001",
-        "http://127.0.0.1:5500",
-        "http://127.0.0.1:5501",
-        "http://localhost:5500",
-        "http://localhost:5501",
-        "http://127.0.0.1:8080",
-        "http://localhost:8080"
-    ],
+    allow_origins=default_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
