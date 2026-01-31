@@ -75,6 +75,8 @@ window.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem('ccp_token', idToken);
         localStorage.setItem('ccp_user_email', user.email || '');
         localStorage.setItem('ccp_user_name', user.displayName || '');
+        localStorage.setItem('ccp_user_photo', user.photoURL || '');
+        localStorage.setItem('ccp_user_uid', user.uid || '');
         console.log("Data saved to localStorage");
         
         // Show success message
@@ -158,6 +160,8 @@ window.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem('ccp_token', idToken);
           localStorage.setItem('ccp_user_email', email);
           localStorage.setItem('ccp_user_name', name || '');
+          localStorage.setItem('ccp_user_photo', user.photoURL || '');
+          localStorage.setItem('ccp_user_uid', user.uid || '');
           
           alert('Account created successfully!');
           window.location.href = 'dashboard.html';
@@ -198,6 +202,8 @@ window.addEventListener("DOMContentLoaded", () => {
           localStorage.setItem('ccp_token', idToken);
           localStorage.setItem('ccp_user_email', email);
           localStorage.setItem('ccp_user_name', user.displayName || '');
+          localStorage.setItem('ccp_user_photo', user.photoURL || '');
+          localStorage.setItem('ccp_user_uid', user.uid || '');
           
           alert('Signed in successfully!');
           window.location.href = 'dashboard.html';

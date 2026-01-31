@@ -231,29 +231,29 @@
                         <p class="subtitle">Update your photo and personal details here.</p>
 
                         <div class="avatar-section">
-                            <div class="large-avatar">S</div>
+                            <div class="large-avatar" id="user-avatar-display">S</div>
                             <div class="avatar-actions">
                                 <div style="display: flex; gap: 12px;">
-                                    <button class="btn-secondary btn-small">Change Photo</button>
-                                    <button class="btn-secondary btn-small" style="color: #ef4444; border-color: #ef4444;">Remove</button>
+                                    <button class="btn-secondary btn-small" id="change-photo-btn">Change Photo</button>
+                                    <button class="btn-secondary btn-small" style="color: #ef4444; border-color: #ef4444;" id="remove-photo-btn">Remove</button>
                                 </div>
                                 <span class="avatar-help">JPG, GIF or PNG. Max size of 800K</span>
                             </div>
                         </div>
 
-                        <form>
+                        <form id="profile-form">
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="first-name">First Name</label>
-                                    <input type="text" id="first-name" value="Siddharth" required>
+                                    <input type="text" id="first-name" placeholder="First Name" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="last-name">Last Name</label>
-                                    <input type="text" id="last-name" value="Verma" required>
+                                    <input type="text" id="last-name" placeholder="Last Name" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="email">Email Address</label>
-                                    <input type="email" id="email" value="sid.verma@example.com" disabled style="background-color: var(--bg-hover, #334155); cursor: not-allowed; opacity: 0.7;">
+                                    <input type="email" id="email" disabled style="background-color: var(--bg-hover, #334155); cursor: not-allowed; opacity: 0.7;">
                                 </div>
                                 <div class="form-group">
                                     <label for="phone">Phone Number</label>
@@ -262,7 +262,7 @@
                             </div>
                             
                             <div class="form-options" style="margin-top: 24px; justify-content: flex-end;">
-                                <button type="submit" class="btn-primary glow">Save Changes</button>
+                                <button type="submit" class="btn-primary glow" id="save-profile-btn">Save Changes</button>
                             </div>
                         </form>
                     </div>
@@ -272,17 +272,17 @@
                         <h2>Company Details</h2>
                         <p class="subtitle">Manage your business information for invoicing and tax.</p>
 
-                        <form>
+                        <form id="company-form">
                             <div class="form-grid full">
                                 <div class="form-group">
                                     <label for="company-name">Company Name</label>
-                                    <input type="text" id="company-name" value="Verma Tech Solutions Pvt Ltd">
+                                    <input type="text" id="company-name" placeholder="Enter your company name">
                                 </div>
                                 
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label for="gstin">GSTIN / Tax ID</label>
-                                        <input type="text" id="gstin" value="27ABCDE1234F1Z5" placeholder="e.g. 27ABCDE1234F1Z5">
+                                        <input type="text" id="gstin" placeholder="e.g. 27ABCDE1234F1Z5">
                                     </div>
                                     <div class="form-group">
                                         <label for="currency">Default Currency</label>
@@ -296,12 +296,12 @@
 
                                 <div class="form-group">
                                     <label for="address">Billing Address</label>
-                                    <textarea id="address" rows="3">Plot No. 45, Tech Park, Sector 5, Bangalore, KA</textarea>
+                                    <textarea id="address" rows="3" placeholder="Enter your billing address"></textarea>
                                 </div>
                             </div>
 
                             <div class="form-options" style="margin-top: 24px; justify-content: flex-end;">
-                                <button type="submit" class="btn-primary glow">Update Company Info</button>
+                                <button type="submit" class="btn-primary glow" id="update-company-btn">Update Company Info</button>
                             </div>
                         </form>
                     </div>
@@ -311,7 +311,7 @@
                         <h2>Security</h2>
                         <p class="subtitle">Manage your password and account security.</p>
                         
-                        <form>
+                        <form id="security-form">
                             <div class="form-grid full">
                                 <div class="form-group">
                                     <label for="current-pass">Current Password</label>
@@ -329,8 +329,8 @@
                                 </div>
                             </div>
                             <div class="form-options" style="margin-top: 24px; justify-content: space-between; align-items: center;">
-                                <a href="#" style="color: #ef4444; font-size: 0.9rem; text-decoration: none;">Deactivate Account</a>
-                                <button type="submit" class="btn-secondary">Update Password</button>
+                                <a href="#" style="color: #ef4444; font-size: 0.9rem; text-decoration: none;" id="deactivate-btn">Deactivate Account</a>
+                                <button type="submit" class="btn-secondary" id="update-password-btn">Update Password</button>
                             </div>
                         </form>
                     </div>
@@ -350,15 +350,406 @@
 
     <script src="../public/assets/js/main.js"></script>
     
-    <!-- Simple script for sidebar active state (Simulated) -->
+    <!-- Profile Page Script -->
     <script>
-        document.querySelectorAll('.settings-nav-item').forEach(item => {
-            item.addEventListener('click', function(e) {
-                // Remove active class from all
-                document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
-                // Add to clicked
-                this.classList.add('active');
+        // Initialize profile page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserProfile();
+            setupFormHandlers();
+            setupSidebarNavigation();
+            updateUserMenu();
+        });
+
+        /**
+         * Load user profile data from localStorage and API
+         */
+        function loadUserProfile() {
+            // Get user data from localStorage
+            const userEmail = localStorage.getItem('ccp_user_email');
+            const userName = localStorage.getItem('ccp_user_name');
+            const userPhoto = localStorage.getItem('ccp_user_photo');
+            const userToken = localStorage.getItem('ccp_token');
+
+            // Check if user is logged in
+            if (!userEmail || !userToken) {
+                console.warn('User not logged in, redirecting to auth');
+                window.location.href = 'auth.html';
+                return;
+            }
+
+            console.log('Loading profile for:', userEmail, userName);
+
+            // Parse name into first and last name
+            const names = userName ? userName.split(' ') : ['', ''];
+            const firstName = names[0] || '';
+            const lastName = names.slice(1).join(' ') || '';
+
+            // Set form fields
+            document.getElementById('email').value = userEmail;
+            document.getElementById('first-name').value = firstName;
+            document.getElementById('last-name').value = lastName;
+
+            // Set avatar
+            const avatarElement = document.getElementById('user-avatar-display');
+            const avatarLetter = firstName.charAt(0).toUpperCase() || userEmail.charAt(0).toUpperCase();
+            
+            if (userPhoto) {
+                // Display photo if available from Google
+                avatarElement.style.backgroundImage = `url('${userPhoto}')`;
+                avatarElement.style.backgroundSize = 'cover';
+                avatarElement.style.backgroundPosition = 'center';
+                avatarElement.textContent = '';
+            } else {
+                // Display first letter
+                avatarElement.textContent = avatarLetter;
+            }
+
+            // Also update user menu avatar
+            const userAvatarBtns = document.querySelectorAll('.user-avatar');
+            userAvatarBtns.forEach(btn => {
+                const avatarText = btn.querySelector('.avatar-text');
+                if (userPhoto) {
+                    btn.style.backgroundImage = `url('${userPhoto}')`;
+                    btn.style.backgroundSize = 'cover';
+                    btn.style.backgroundPosition = 'center';
+                    avatarText.textContent = '';
+                } else {
+                    avatarText.textContent = avatarLetter;
+                }
             });
+
+            // Try to fetch additional user data from backend
+            fetchAdditionalUserData(userToken);
+        }
+
+        /**
+         * Fetch additional user data from backend
+         */
+        function fetchAdditionalUserData(token) {
+            const backendUrl = localStorage.getItem('ccp_backend_url') || 'http://localhost:8000';
+            
+            fetch(`${backendUrl}/auth/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.log('User endpoint not available or not implemented');
+                    return null;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    console.log('User data from backend:', data);
+                    // Update fields with backend data if available
+                    if (data.full_name) {
+                        const names = data.full_name.split(' ');
+                        document.getElementById('first-name').value = names[0];
+                        document.getElementById('last-name').value = names.slice(1).join(' ');
+                    }
+                    if (data.phone) document.getElementById('phone').value = data.phone;
+                    if (data.company_name) document.getElementById('company-name').value = data.company_name;
+                    if (data.gstin) document.getElementById('gstin').value = data.gstin;
+                    if (data.address) document.getElementById('address').value = data.address;
+                    if (data.currency) document.getElementById('currency').value = data.currency;
+                }
+            })
+            .catch(error => {
+                console.log('Could not fetch additional user data:', error.message);
+                // This is okay, we already have basic data from Google
+            });
+        }
+
+        /**
+         * Setup form submission handlers
+         */
+        function setupFormHandlers() {
+            // Profile form
+            const profileForm = document.getElementById('profile-form');
+            if (profileForm) {
+                profileForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    saveProfileData();
+                });
+            }
+
+            // Company form
+            const companyForm = document.getElementById('company-form');
+            if (companyForm) {
+                companyForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    saveCompanyData();
+                });
+            }
+
+            // Security form
+            const securityForm = document.getElementById('security-form');
+            if (securityForm) {
+                securityForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    updatePassword();
+                });
+            }
+
+            // Photo buttons
+            document.getElementById('change-photo-btn')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Photo upload functionality coming soon!');
+            });
+
+            document.getElementById('remove-photo-btn')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Photo removal functionality coming soon!');
+            });
+
+            document.getElementById('deactivate-btn')?.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) {
+                    deactivateAccount();
+                }
+            });
+        }
+
+        /**
+         * Save profile data
+         */
+        function saveProfileData() {
+            const firstName = document.getElementById('first-name').value;
+            const lastName = document.getElementById('last-name').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const token = localStorage.getItem('ccp_token');
+
+            const profileData = {
+                full_name: `${firstName} ${lastName}`.trim(),
+                phone: phone,
+                email: email
+            };
+
+            const backendUrl = localStorage.getItem('ccp_backend_url') || 'http://localhost:8000';
+
+            fetch(`${backendUrl}/auth/update-profile`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(profileData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Profile updated:', data);
+                // Update localStorage
+                const fullName = profileData.full_name;
+                localStorage.setItem('ccp_user_name', fullName);
+                
+                // Show success message
+                alert('Profile updated successfully!');
+            })
+            .catch(error => {
+                console.error('Error updating profile:', error);
+                alert('Failed to update profile. Please try again.');
+            });
+        }
+
+        /**
+         * Save company data
+         */
+        function saveCompanyData() {
+            const companyName = document.getElementById('company-name').value;
+            const gstin = document.getElementById('gstin').value;
+            const currency = document.getElementById('currency').value;
+            const address = document.getElementById('address').value;
+            const token = localStorage.getItem('ccp_token');
+
+            const companyData = {
+                company_name: companyName,
+                gstin: gstin,
+                currency: currency,
+                address: address
+            };
+
+            const backendUrl = localStorage.getItem('ccp_backend_url') || 'http://localhost:8000';
+
+            fetch(`${backendUrl}/auth/update-company`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(companyData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Company info updated:', data);
+                alert('Company information updated successfully!');
+            })
+            .catch(error => {
+                console.error('Error updating company info:', error);
+                alert('Failed to update company information. Please try again.');
+            });
+        }
+
+        /**
+         * Update password
+         */
+        function updatePassword() {
+            const currentPass = document.getElementById('current-pass').value;
+            const newPass = document.getElementById('new-pass').value;
+            const confirmPass = document.getElementById('confirm-pass').value;
+            const token = localStorage.getItem('ccp_token');
+
+            // Client-side validation
+            if (!currentPass || !newPass || !confirmPass) {
+                alert('Please fill in all password fields');
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                alert('New passwords do not match');
+                return;
+            }
+
+            if (newPass.length < 8) {
+                alert('New password must be at least 8 characters long');
+                return;
+            }
+
+            const passwordData = {
+                current_password: currentPass,
+                new_password: newPass
+            };
+
+            const backendUrl = localStorage.getItem('ccp_backend_url') || 'http://localhost:8000';
+
+            fetch(`${backendUrl}/auth/update-password`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(passwordData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Password updated:', data);
+                alert('Password updated successfully!');
+                // Clear password fields
+                document.getElementById('current-pass').value = '';
+                document.getElementById('new-pass').value = '';
+                document.getElementById('confirm-pass').value = '';
+            })
+            .catch(error => {
+                console.error('Error updating password:', error);
+                alert('Failed to update password. Please try again.');
+            });
+        }
+
+        /**
+         * Deactivate account
+         */
+        function deactivateAccount() {
+            const token = localStorage.getItem('ccp_token');
+            const backendUrl = localStorage.getItem('ccp_backend_url') || 'http://localhost:8000';
+
+            fetch(`${backendUrl}/auth/deactivate`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                // Clear localStorage
+                localStorage.removeItem('ccp_token');
+                localStorage.removeItem('ccp_user_email');
+                localStorage.removeItem('ccp_user_name');
+                
+                alert('Account deactivated. Redirecting to home...');
+                window.location.href = 'index.html';
+            })
+            .catch(error => {
+                console.error('Error deactivating account:', error);
+                alert('Failed to deactivate account. Please try again.');
+            });
+        }
+
+        /**
+         * Setup sidebar navigation
+         */
+        function setupSidebarNavigation() {
+            document.querySelectorAll('.settings-nav-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // Remove active class from all
+                    document.querySelectorAll('.settings-nav-item').forEach(nav => nav.classList.remove('active'));
+                    // Add to clicked
+                    this.classList.add('active');
+                });
+            });
+        }
+
+        /**
+         * Update user menu with user info
+         */
+        function updateUserMenu() {
+            const userEmail = localStorage.getItem('ccp_user_email');
+            const userName = localStorage.getItem('ccp_user_name');
+            
+            if (!userEmail) return;
+
+            // Update logout link to clear localStorage
+            const logoutLink = document.querySelector('.user-dropdown a:last-child');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    localStorage.removeItem('ccp_token');
+                    localStorage.removeItem('ccp_user_email');
+                    localStorage.removeItem('ccp_user_name');
+                    window.location.href = 'index.html';
+                });
+            }
+        }
+
+        /**
+         * Toggle user menu dropdown
+         */
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('user-dropdown');
+            if (dropdown) {
+                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('user-dropdown');
+            const userBtn = document.querySelector('.user-avatar');
+            
+            if (dropdown && userBtn && !userBtn.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
         });
     </script>
 </body>
