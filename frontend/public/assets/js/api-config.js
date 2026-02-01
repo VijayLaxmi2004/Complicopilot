@@ -13,7 +13,7 @@
             hostname.includes('complicopilot.web.app') || 
             hostname.includes('complicopilot.firebaseapp.com')) {
             // Backend deployed on Render
-            return 'https://complicopilot-backend.onrender.com';
+            return 'https://complicopilot-new.onrender.com';
         }
         
         // Local development with Docker
