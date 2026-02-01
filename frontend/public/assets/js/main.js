@@ -893,6 +893,7 @@ function initUploadPage() {
         const receiptsCount = document.getElementById('receipts-count');
         const exportAllBtn = document.getElementById('export-all-csv-btn');
         const approveAllBtn = document.getElementById('approve-all-btn');
+        const generateReportBtn = document.getElementById('generate-report-btn');
 
         if (!reviewList) return;
 
@@ -918,6 +919,54 @@ function initUploadPage() {
 
         if (approveAllBtn) {
             approveAllBtn.onclick = () => approveAllReceipts();
+        }
+
+        // Generate Report button handler
+        if (generateReportBtn) {
+            generateReportBtn.onclick = async () => {
+                // Combine OCR text from all processed receipts
+                const allOcrText = processedReceipts
+                    .map((r, i) => `--- Receipt ${i + 1}: ${r.filename || 'Unknown'} ---\n${r.extracted?.ocr_text || 'No text'}`)
+                    .join('\n\n');
+
+                if (!allOcrText || allOcrText.includes('No text')) {
+                    showNotification('Error', 'No OCR text available to generate report.', 'error');
+                    return;
+                }
+
+                addLoadingState(generateReportBtn);
+
+                try {
+                    const response = await fetch(API_CONFIG.url('/api/v1/receipts/report'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: allOcrText })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Failed to generate report.');
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `compliance_report_${new Date().toISOString().slice(0, 10)}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+
+                    showNotification('Success', 'Compliance report generated and downloaded!', 'success');
+                } catch (error) {
+                    console.error('Report generation error:', error);
+                    showNotification('Error', `Could not generate report: ${error.message}`, 'error');
+                } finally {
+                    removeLoadingState(generateReportBtn);
+                }
+            };
         }
     }
 
